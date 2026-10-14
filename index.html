@@ -1,0 +1,1090 @@
+<!DOCTYPE html>
+<html lang="th">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0, viewport-fit=cover">
+<title>TripBudget — คำนวณค่าใช้จ่ายเที่ยวต่างประเทศ</title>
+<meta name="description" content="วางแผนและบันทึกค่าใช้จ่ายเที่ยวต่างประเทศ ตั๋ว ที่พัก ค่าใช้จ่ายรายวัน แปลงสกุลเงิน หารเงินกับเพื่อน">
+<meta name="theme-color" content="#0e9f9a">
+<link rel="manifest" href="manifest.json">
+<link rel="icon" href="icons/favicon.svg" type="image/svg+xml">
+<link rel="apple-touch-icon" href="icons/apple-touch-icon.png">
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+<link href="https://fonts.googleapis.com/css2?family=IBM+Plex+Sans+Thai:wght@400;500;600;700&family=IBM+Plex+Mono:wght@500;600&display=swap" rel="stylesheet">
+<style>
+:root{
+  --bg:#f5f6f8;--card:#fff;--soft:#f1f3f6;--soft2:#e7eaf0;--line:#e3e6ec;--line2:#cfd4dd;
+  --ink:#1a202c;--ink2:#4a5568;--ink3:#8a94a6;
+  --acc:#0e9f9a;--acc-soft:#e3f6f5;--warn:#c76a05;--warn-soft:#fff4e0;
+  --bad:#d23b3b;--bad-soft:#fdeceb;--good:#178a45;--good-soft:#e6f6ec;
+  --r:12px;--rs:9px;--nav:64px;
+}
+*{box-sizing:border-box;margin:0;padding:0}
+[hidden]{display:none!important}
+html{-webkit-text-size-adjust:100%}
+body{font-family:'IBM Plex Sans Thai',system-ui,sans-serif;background:var(--bg);color:var(--ink);font-size:15px;line-height:1.55;padding-bottom:calc(var(--nav) + env(safe-area-inset-bottom) + 24px)}
+body.noscroll{overflow:hidden}
+button{font:inherit;color:inherit;cursor:pointer;border:none;background:none}
+input,select{font:inherit;font-size:15px;color:var(--ink);width:100%;background:#fff;border:1px solid var(--line2);border-radius:var(--rs);padding:9px 11px;margin-top:4px;outline:none;min-height:42px}
+input:focus,select:focus{border-color:var(--acc);box-shadow:0 0 0 3px var(--acc-soft)}
+input:disabled{background:var(--soft);color:var(--ink3)}
+label{display:block;font-size:12.5px;color:var(--ink2);font-weight:500}
+.mono{font-family:'IBM Plex Mono',ui-monospace,monospace;font-variant-numeric:tabular-nums}
+
+/* top bar */
+.topbar{position:sticky;top:0;z-index:50;background:rgba(255,255,255,.94);backdrop-filter:blur(10px);-webkit-backdrop-filter:blur(10px);border-bottom:1px solid var(--line);display:flex;align-items:center;gap:10px;padding:10px 12px 10px 16px;padding-top:calc(10px + env(safe-area-inset-top))}
+.logo{font-weight:700;letter-spacing:-.3px;font-size:17px;white-space:nowrap}.logo i{font-style:normal;color:var(--acc)}
+#tbTitle{flex:1;min-width:0;white-space:nowrap;overflow:hidden;text-overflow:ellipsis;font-size:13.5px;color:var(--ink2);text-align:right}
+.iconbtn{width:38px;height:38px;border-radius:10px;display:grid;place-items:center;font-size:20px;flex-shrink:0}.iconbtn:hover{background:var(--soft)}
+#menu{position:absolute;right:10px;top:calc(100% + 4px);background:#fff;border:1px solid var(--line);border-radius:12px;box-shadow:0 10px 30px rgba(20,30,50,.14);padding:6px;min-width:220px}
+#menu button{display:block;width:100%;text-align:left;padding:10px 12px;border-radius:8px;font-size:14px}#menu button:hover{background:var(--soft)}
+#menu .mfoot{font-size:11px;color:var(--ink3);padding:6px 12px 4px;border-top:1px solid var(--line);margin-top:4px}
+.pill{font-size:11px;background:var(--warn-soft);color:var(--warn);padding:2px 8px;border-radius:99px;font-weight:600;white-space:nowrap}
+
+main{max-width:760px;margin:0 auto;padding:16px}
+.pagehd{display:flex;align-items:flex-end;justify-content:space-between;gap:12px;margin:4px 0 14px}
+h1{font-size:21px;line-height:1.25}.sub{font-size:12.5px;color:var(--ink3)}
+.card{background:var(--card);border:1px solid var(--line);border-radius:var(--r);padding:16px;margin-bottom:12px}
+.card.tight{padding:12px 14px}
+.hd{font-size:13.5px;font-weight:700;color:var(--ink2);margin-bottom:12px;display:flex;align-items:center;gap:8px}
+.grid2{display:grid;grid-template-columns:1fr 1fr;gap:10px 12px}.grid2 .full{grid-column:1/-1}
+@media(max-width:360px){.grid2{grid-template-columns:1fr}}
+.row{display:flex;align-items:center}.gap{gap:8px}.grow{flex:1;min-width:0}.ml{margin-left:auto}.mt8{margin-top:10px}.right{text-align:right}
+.btn{display:inline-flex;align-items:center;justify-content:center;gap:6px;padding:10px 16px;border-radius:10px;font-weight:600;font-size:14px;white-space:nowrap;transition:.15s}
+.btn.pri{background:var(--acc);color:#fff}.btn.pri:active{filter:brightness(.92)}
+.btn.ghost{border:1px solid var(--line2);background:#fff;color:var(--ink2)}.btn.ghost:hover{border-color:var(--acc);color:var(--acc)}
+.btn.danger{color:var(--bad);border:1px solid #f3c2c2;background:#fff}
+.btn.sm{padding:7px 12px;font-size:13px}.btn.xs{padding:5px 10px;font-size:12px;border-radius:8px}
+.btn.block{width:100%;padding:13px}
+.btn:disabled{opacity:.4;cursor:not-allowed}
+.linkbtn{color:var(--acc);font-weight:600;font-size:12.5px;text-decoration:underline;padding:0 2px}
+.hint{font-size:12px;color:var(--ink3);margin-top:8px}
+.tag{background:var(--soft);color:var(--ink2);font-size:11px;padding:2px 8px;border-radius:20px;font-weight:600}
+.sumline{display:flex;justify-content:flex-end;align-items:baseline;gap:10px;margin-top:12px;padding-top:12px;border-top:1px dashed var(--line);font-size:13px;color:var(--ink2)}.sumline b{font-size:17px;color:var(--ink)}
+.empty{text-align:center;color:var(--ink3);padding:24px 8px;font-size:14px}
+.empty.big{padding:44px 16px}.empty .emo{font-size:44px;margin-bottom:8px}.empty b{display:block;color:var(--ink);font-size:17px;margin-bottom:4px}.empty p{margin-bottom:16px}
+.empty .row{justify-content:center}
+
+/* trip cards */
+.trip{cursor:pointer}.trip.on{border-color:var(--acc);box-shadow:0 0 0 3px var(--acc-soft)}
+.flag{font-size:30px;line-height:1;margin-right:12px}.tname{font-weight:700;font-size:15.5px}.meta{font-size:12px;color:var(--ink3)}.big{font-size:17px;font-weight:700;color:var(--acc)}
+.bar{height:8px;background:var(--soft2);border-radius:99px;overflow:hidden;margin-top:10px}.bar i{display:block;height:100%;background:var(--acc);border-radius:99px}.bar.warn i{background:var(--warn)}.bar.bad i{background:var(--bad)}
+.barlbl{display:flex;justify-content:space-between;font-size:11.5px;color:var(--ink3);margin-top:4px}
+
+.stats{display:grid;grid-template-columns:repeat(auto-fit,minmax(115px,1fr));gap:8px;margin-bottom:12px}
+.stats>div{background:#fff;border:1px solid var(--line);border-radius:var(--r);padding:10px 12px}.stats b{display:block;font-size:16px}.stats span{font-size:11.5px;color:var(--ink3)}
+.tgood{color:var(--good)}.tbad{color:var(--bad)}
+.alert{border-radius:10px;padding:9px 12px;font-size:13px;margin-top:10px}.alert.good{background:var(--good-soft);color:var(--good)}.alert.warn{background:var(--warn-soft);color:var(--warn)}.alert.bad{background:var(--bad-soft);color:var(--bad)}.alert.info{background:var(--soft);color:var(--ink2)}
+.seg{display:flex;background:var(--soft2);border-radius:10px;padding:3px;margin-bottom:12px}.seg button{flex:1;padding:8px;border-radius:8px;font-size:13.5px;font-weight:600;color:var(--ink2)}.seg button.on{background:#fff;color:var(--acc);box-shadow:0 1px 3px rgba(0,0,0,.08)}
+.filters{display:grid;grid-template-columns:1fr 1fr;gap:8px;margin-bottom:6px}.filters .full{grid-column:1/-1}.filters input,.filters select{margin-top:0}
+
+/* expense items */
+.dayhd{display:flex;justify-content:space-between;font-size:12.5px;font-weight:700;color:var(--ink2);margin:16px 2px 6px}
+.item{display:flex;gap:12px;align-items:flex-start;background:#fff;border:1px solid var(--line);border-radius:var(--r);padding:12px;margin-bottom:8px;cursor:pointer}.item:active{background:var(--soft)}
+.ico{width:38px;height:38px;border-radius:10px;display:grid;place-items:center;font-size:19px;flex-shrink:0}
+.iname{font-weight:600;word-break:break-word}.imeta{font-size:12px;color:var(--ink3)}.b{font-weight:700}
+.thumbs{display:flex;flex-wrap:wrap;gap:6px;margin-top:6px}.thumbs img{width:44px;height:44px;object-fit:cover;border-radius:8px;border:1px solid var(--line);background:var(--soft)}
+.th{position:relative}.th img{width:64px;height:64px;object-fit:cover;border-radius:8px;border:1px solid var(--line);background:var(--soft)}.th button{position:absolute;top:-6px;right:-6px;width:22px;height:22px;border-radius:50%;background:var(--bad);color:#fff;font-size:11px}
+.fab{position:fixed;right:18px;bottom:calc(var(--nav) + env(safe-area-inset-bottom) + 16px);width:56px;height:56px;border-radius:18px;background:var(--acc);color:#fff;font-size:30px;line-height:1;box-shadow:0 8px 20px rgba(14,159,154,.35);z-index:40}
+@media(min-width:800px){.fab{right:calc(50% - 380px + 18px)}}
+
+/* bottom nav */
+.nav{position:fixed;left:0;right:0;bottom:0;z-index:60;background:#fff;border-top:1px solid var(--line);display:flex;justify-content:center;padding-bottom:env(safe-area-inset-bottom)}
+.nav button{flex:1;max-width:150px;height:var(--nav);display:flex;flex-direction:column;align-items:center;justify-content:center;gap:3px;font-size:11.5px;color:var(--ink3);font-weight:600}
+.nav button span{font-size:21px;line-height:1;filter:grayscale(1);opacity:.6}.nav button.on{color:var(--acc)}.nav button.on span{filter:none;opacity:1}
+
+/* edit */
+.mrow{display:flex;align-items:center;gap:8px;margin-bottom:8px}.mrow input{margin-top:0}
+.avatar{width:34px;height:34px;border-radius:50%;color:#fff;display:grid;place-items:center;font-weight:700;flex-shrink:0;font-size:14px}
+.hrow{border:1px solid var(--line);border-radius:10px;padding:12px;margin-bottom:10px;background:var(--soft)}.hfoot{grid-column:1/-1;display:flex;justify-content:space-between;align-items:center}
+.lvl{display:flex;gap:6px;margin-bottom:10px}.lvl button{flex:1;padding:8px;border:1px solid var(--line2);border-radius:9px;font-size:13px;font-weight:600;color:var(--ink2);background:#fff}.lvl button.on{border-color:var(--acc);background:var(--acc-soft);color:var(--acc)}
+
+table{width:100%;border-collapse:collapse;font-size:13.5px}th{font-size:11.5px;color:var(--ink3);font-weight:600;text-align:left;padding:6px 4px;border-bottom:1px solid var(--line)}td{padding:8px 4px;border-bottom:1px solid var(--line)}tr:last-child td{border-bottom:none}td.r,th.r{text-align:right}
+.scrollx{overflow-x:auto;-webkit-overflow-scrolling:touch}
+.brow{display:flex;align-items:center;gap:10px;padding:7px 0}.brow .lb{width:120px;font-size:13px;flex-shrink:0;white-space:nowrap;overflow:hidden;text-overflow:ellipsis}.brow .bar{flex:1;margin:0}.brow .v{width:84px;text-align:right;font-size:13px}.brow .p{width:38px;text-align:right;font-size:11.5px;color:var(--ink3)}
+@media(max-width:400px){.brow .lb{width:96px}.brow .p{display:none}}
+
+/* calendar */
+.cal{display:grid;grid-template-columns:repeat(7,1fr);gap:4px}.dow{text-align:center;font-size:11px;color:var(--ink3);padding-bottom:4px}
+.cd{min-height:52px;border-radius:8px;padding:4px 5px;font-size:11px;color:var(--ink3);display:flex;flex-direction:column;align-items:flex-start;text-align:left}
+.cd.in{background:var(--acc-soft);color:var(--ink)}.cd.in b{font-size:10.5px;color:var(--acc);font-family:'IBM Plex Mono',monospace;margin-top:auto}.cd.sel{outline:2px solid var(--acc)}
+
+/* split */
+.xfer{display:flex;align-items:center;gap:8px;padding:10px 0;border-bottom:1px solid var(--line)}.xfer:last-child{border-bottom:none}.arrow{color:var(--ink3)}
+
+/* currency */
+.cvres{background:var(--acc-soft);border-radius:12px;padding:18px;text-align:center;font-size:21px;font-weight:700;color:var(--acc);margin-top:12px;word-break:break-word}
+.ratesgrid{display:grid;grid-template-columns:repeat(auto-fill,minmax(150px,1fr));gap:6px}.ratesgrid div{background:var(--soft);border-radius:8px;padding:8px 10px;font-size:12.5px;display:flex;justify-content:space-between;gap:6px}
+.dot{display:inline-block;width:6px;height:6px;border-radius:50%;background:var(--good);margin-right:5px;vertical-align:middle}.dot.off{background:var(--ink3)}
+
+/* modal */
+.chips{display:flex;flex-wrap:wrap;gap:6px;margin:6px 0 12px}
+.chip{border:1px solid var(--line2);border-radius:99px;padding:6px 12px;font-size:13px;background:#fff;color:var(--ink2);display:inline-flex;align-items:center;gap:6px;cursor:pointer}
+.chip.on{border-color:var(--acc);background:var(--acc-soft);color:var(--acc);font-weight:600}
+.chip.ck input{width:auto;min-height:0;margin:0;accent-color:var(--acc)}
+.lbl{font-size:12.5px;color:var(--ink2);font-weight:500;margin-top:4px;display:flex;justify-content:space-between;align-items:center}
+#modal{position:fixed;inset:0;z-index:100;background:rgba(20,25,35,.45);display:flex;align-items:flex-end;justify-content:center}
+.sheet{background:#fff;width:100%;max-width:560px;max-height:92vh;overflow-y:auto;border-radius:18px 18px 0 0;padding:18px 16px 0}
+@media(min-width:600px){#modal{align-items:center}.sheet{border-radius:18px}}
+.sheet>label,.sheet .grid2{margin-bottom:10px}
+.sheethd{display:flex;justify-content:space-between;align-items:center;margin-bottom:12px;font-size:16px}.x{width:34px;height:34px;border-radius:50%;background:var(--soft)}
+.raterow{display:flex;align-items:flex-end;gap:8px;background:var(--soft);padding:10px;border-radius:10px;margin-bottom:6px}.raterow label{flex:1;margin:0}
+.preview{font-size:13px;color:var(--acc);font-weight:600;min-height:20px;margin-bottom:6px}
+.upload{display:flex;align-items:center;justify-content:center;border:1.5px dashed var(--line2);border-radius:10px;padding:12px;color:var(--ink2);font-weight:600;margin-top:8px;cursor:pointer;font-size:14px}
+details.repeat{margin-top:12px;background:var(--soft);border-radius:10px;padding:10px 12px}details summary{cursor:pointer;font-size:13.5px;font-weight:600;color:var(--ink2)}details label{margin-top:8px}
+.sheetft{display:flex;gap:8px;position:sticky;bottom:0;background:#fff;padding:12px 0 calc(14px + env(safe-area-inset-bottom));margin-top:8px;border-top:1px solid var(--line)}
+#ask{position:fixed;inset:0;z-index:150;background:rgba(20,25,35,.45);display:grid;place-items:center;padding:16px}.dlg{background:#fff;border-radius:16px;padding:18px;width:100%;max-width:360px;box-shadow:0 12px 40px rgba(0,0,0,.2)}.dlg p{font-size:15px;line-height:1.6}
+#lightbox{position:fixed;inset:0;z-index:200;background:rgba(0,0,0,.9);display:grid;place-items:center}#lightbox img{max-width:94vw;max-height:88vh;border-radius:8px}
+#toast{position:fixed;left:50%;transform:translateX(-50%);bottom:calc(var(--nav) + env(safe-area-inset-bottom) + 84px);z-index:300;display:flex;flex-direction:column;gap:6px;align-items:center;pointer-events:none;width:max-content;max-width:92vw}
+.toast{background:#1a202c;color:#fff;padding:9px 16px;border-radius:99px;font-size:13.5px;box-shadow:0 6px 20px rgba(0,0,0,.2);animation:tin .25s;text-align:center}
+.toast.warn{background:var(--warn)}.toast.bad{background:var(--bad)}
+@keyframes tin{from{opacity:0;transform:translateY(8px)}}
+@media print{.topbar,.nav,.fab,.btn,.seg,#toast{display:none!important}body{padding:0;background:#fff}.card{break-inside:avoid}}
+</style>
+</head>
+<body>
+
+<header class="topbar">
+  <div class="logo">Trip<i>Budget</i></div>
+  <span id="offline" class="pill" hidden>ออฟไลน์</span>
+  <div id="tbTitle"></div>
+  <button class="iconbtn" data-act="menu" aria-label="เมนู">⋮</button>
+  <div id="menu" hidden>
+    <button data-act="refreshRates">🔄 อัปเดตเรทเงิน</button>
+    <button data-act="exportData">💾 สำรองข้อมูล (Export)</button>
+    <button data-act="importData">📂 กู้คืนข้อมูล (Import)</button>
+    <button id="installBtn" data-act="install" hidden>📲 ติดตั้งเป็นแอป</button>
+    <div class="mfoot">ข้อมูลเก็บในเครื่องนี้เท่านั้น · v3.0</div>
+  </div>
+  <input type="file" id="importFile" accept=".json,application/json" hidden>
+</header>
+
+<main id="view"></main>
+
+<nav class="nav">
+  <button data-act="go" data-v="trips"><span>🗺️</span>ทริป</button>
+  <button data-act="go" data-v="expenses"><span>💰</span>รายจ่าย</button>
+  <button data-act="go" data-v="split"><span>🤝</span>หารเงิน</button>
+  <button data-act="go" data-v="currency"><span>💱</span>แปลงเงิน</button>
+  <button data-act="go" data-v="summary"><span>📊</span>สรุป</button>
+</nav>
+
+<div id="modal" hidden></div>
+<div id="lightbox" data-act="closeLb" hidden><img id="lbImg" alt="ใบเสร็จ"></div>
+<div id="ask" hidden></div>
+<div id="toast"></div>
+
+<script>
+'use strict';
+/* ================= CONSTANTS ================= */
+const KEY = 'tb_v3', RKEY = 'tb_rates', OLD_KEY = 'tripbudget_v2';
+
+const CURR = {
+  THB:{s:'฿',n:'บาทไทย'}, USD:{s:'$',n:'ดอลลาร์สหรัฐ'}, EUR:{s:'€',n:'ยูโร'}, JPY:{s:'¥',n:'เยนญี่ปุ่น'},
+  KRW:{s:'₩',n:'วอนเกาหลี'}, CNY:{s:'CN¥',n:'หยวนจีน'}, HKD:{s:'HK$',n:'ดอลลาร์ฮ่องกง'}, TWD:{s:'NT$',n:'ดอลลาร์ไต้หวัน'},
+  SGD:{s:'S$',n:'ดอลลาร์สิงคโปร์'}, MYR:{s:'RM',n:'ริงกิตมาเลเซีย'}, VND:{s:'₫',n:'ด่งเวียดนาม'}, IDR:{s:'Rp',n:'รูเปียห์'},
+  PHP:{s:'₱',n:'เปโซฟิลิปปินส์'}, INR:{s:'₹',n:'รูปีอินเดีย'}, LAK:{s:'₭',n:'กีบลาว'}, KHR:{s:'៛',n:'เรียลกัมพูชา'},
+  MMK:{s:'K',n:'จ๊าดเมียนมา'}, GBP:{s:'£',n:'ปอนด์'}, CHF:{s:'Fr ',n:'ฟรังก์สวิส'}, AUD:{s:'A$',n:'ดอลลาร์ออสเตรเลีย'},
+  NZD:{s:'NZ$',n:'ดอลลาร์นิวซีแลนด์'}, CAD:{s:'C$',n:'ดอลลาร์แคนาดา'}, AED:{s:'AED ',n:'ดิรฮัม'}
+};
+// เรทสำรองโดยประมาณ (บาทต่อ 1 หน่วย) — ใช้เมื่อยังดึงเรทจริงไม่ได้เท่านั้น
+const FALLBACK = {USD:32.9,EUR:37.5,JPY:0.22,KRW:0.024,CNY:4.55,HKD:4.2,TWD:1.05,SGD:25.5,MYR:7.6,VND:0.00125,IDR:0.002,PHP:0.57,INR:0.38,LAK:0.0015,KHR:0.0082,MMK:0.0157,GBP:44,CHF:40,AUD:21.5,NZD:19.5,CAD:24,AED:8.96};
+const ZERO_DEC = new Set(['JPY','KRW','VND','IDR','LAK','KHR','MMK']);
+
+// t = [ที่พัก/คน/คืน, อาหาร/คน/วัน, เดินทาง/คน/วัน, กิจกรรม/คน/วัน, ตั๋วไป-กลับ/คน] (บาท ระดับกลาง ประมาณการคร่าวๆ)
+const COUNTRIES = {
+  JP:{f:'🇯🇵',n:'ญี่ปุ่น',c:'JPY',t:[1500,900,500,500,15000]},
+  KR:{f:'🇰🇷',n:'เกาหลีใต้',c:'KRW',t:[1300,700,300,400,12000]},
+  CN:{f:'🇨🇳',n:'จีน',c:'CNY',t:[1000,500,250,400,12000]},
+  HK:{f:'🇭🇰',n:'ฮ่องกง',c:'HKD',t:[1800,800,250,500,8000]},
+  TW:{f:'🇹🇼',n:'ไต้หวัน',c:'TWD',t:[1100,600,250,350,9000]},
+  SG:{f:'🇸🇬',n:'สิงคโปร์',c:'SGD',t:[2000,700,250,600,6000]},
+  MY:{f:'🇲🇾',n:'มาเลเซีย',c:'MYR',t:[800,400,200,300,4500]},
+  VN:{f:'🇻🇳',n:'เวียดนาม',c:'VND',t:[600,350,200,250,5000]},
+  ID:{f:'🇮🇩',n:'อินโดนีเซีย',c:'IDR',t:[800,400,250,350,7000]},
+  PH:{f:'🇵🇭',n:'ฟิลิปปินส์',c:'PHP',t:[900,400,200,350,7000]},
+  LA:{f:'🇱🇦',n:'ลาว',c:'LAK',t:[600,350,200,250,4000]},
+  KH:{f:'🇰🇭',n:'กัมพูชา',c:'KHR',t:[700,400,200,350,5000]},
+  MM:{f:'🇲🇲',n:'เมียนมา',c:'MMK',t:[700,350,200,250,5000]},
+  IN:{f:'🇮🇳',n:'อินเดีย',c:'INR',t:[700,300,200,250,9000]},
+  AE:{f:'🇦🇪',n:'ดูไบ (UAE)',c:'AED',t:[2200,900,400,800,14000]},
+  GB:{f:'🇬🇧',n:'อังกฤษ',c:'GBP',t:[3000,1400,600,700,32000]},
+  EU:{f:'🇪🇺',n:'ยุโรป (ยูโรโซน)',c:'EUR',t:[2600,1300,500,700,30000]},
+  CH:{f:'🇨🇭',n:'สวิตเซอร์แลนด์',c:'CHF',t:[3500,1800,900,900,32000]},
+  US:{f:'🇺🇸',n:'สหรัฐอเมริกา',c:'USD',t:[3000,1500,700,800,38000]},
+  CA:{f:'🇨🇦',n:'แคนาดา',c:'CAD',t:[2600,1300,600,700,40000]},
+  AU:{f:'🇦🇺',n:'ออสเตรเลีย',c:'AUD',t:[2500,1200,500,700,22000]},
+  NZ:{f:'🇳🇿',n:'นิวซีแลนด์',c:'NZD',t:[2400,1200,600,700,26000]},
+  OTHER:{f:'🌍',n:'อื่นๆ',c:'',t:[1500,700,400,400,15000]}
+};
+const LEVELS = {budget:{n:'ประหยัด',m:.6,fm:.8}, mid:{n:'กลาง',m:1,fm:1}, comfort:{n:'สบาย',m:1.8,fm:1.6}};
+const CATS = {
+  food:{n:'อาหาร',i:'🍜',c:'#178a45'}, transport:{n:'เดินทาง',i:'🚇',c:'#c76a05'},
+  activity:{n:'กิจกรรม',i:'🎟️',c:'#2563eb'}, shopping:{n:'ช้อปปิ้ง',i:'🛍️',c:'#c0306f'},
+  hotel:{n:'ที่พัก',i:'🏨',c:'#6d4ae0'}, other:{n:'อื่นๆ',i:'📦',c:'#718096'}
+};
+const PAYS = {cash:'💵 เงินสด', card:'💳 บัตร', promptpay:'📱 QR/PromptPay', transfer:'🏦 โอน'};
+const COLORS = ['#0e9f9a','#6d4ae0','#c76a05','#2563eb','#c0306f','#178a45','#8a5a2b','#5a6b8a'];
+
+/* ================= HELPERS ================= */
+const $ = (s, el=document) => el.querySelector(s);
+const $$ = (s, el=document) => [...el.querySelectorAll(s)];
+const esc = s => String(s ?? '').replace(/[&<>"']/g, c => ({'&':'&amp;','<':'&lt;','>':'&gt;','"':'&quot;',"'":'&#39;'}[c]));
+const uid = () => Date.now().toString(36) + Math.random().toString(36).slice(2, 7);
+const num = v => { const n = parseFloat(v); return isFinite(n) ? n : 0; };
+function fmt(n, d){ n = num(n); if (d === undefined) d = Math.abs(n) >= 100 ? 0 : 2; return n.toLocaleString('th-TH', {minimumFractionDigits:0, maximumFractionDigits:d}); }
+function money(n, curr='THB'){
+  n = num(n); const s = (CURR[curr] || {s:curr+' '}).s;
+  const d = ZERO_DEC.has(curr) ? 0 : (curr === 'THB' && Math.abs(n) >= 100 ? 0 : 2);
+  return (n < 0 ? '-' : '') + s + fmt(Math.abs(n), d);
+}
+const initial = s => { const a = [...String(s || '?').replace(/^[เแโใไ]+/, '')]; return a[0] || '?'; };
+const short = n => n >= 1000 ? (n/1000).toFixed(n >= 10000 ? 0 : 1) + 'k' : Math.round(n);
+const fmtRate = r => !r ? '-' : r >= 1 ? r.toFixed(3) : String(+r.toPrecision(4));
+const rateInput = r => !r ? '' : r >= 1 ? +r.toFixed(4) : +r.toPrecision(5);
+const todayIso = () => { const d = new Date(); return d.getFullYear()+'-'+String(d.getMonth()+1).padStart(2,'0')+'-'+String(d.getDate()).padStart(2,'0'); };
+const thDate = iso => iso ? new Date(iso+'T00:00').toLocaleDateString('th-TH',{day:'numeric',month:'short'}) : '';
+function timeAgo(iso){
+  if (!iso) return '';
+  const m = Math.round((Date.now() - new Date(iso)) / 60000);
+  if (m < 1) return 'เมื่อสักครู่'; if (m < 60) return m + ' นาทีที่แล้ว';
+  const h = Math.round(m/60); if (h < 24) return h + ' ชม.ที่แล้ว';
+  return Math.round(h/24) + ' วันที่แล้ว';
+}
+function toast(msg, type=''){
+  const el = document.createElement('div'); el.className = 'toast ' + type; el.textContent = msg;
+  $('#toast').appendChild(el); setTimeout(() => el.remove(), 2800);
+}
+function download(name, text, type){
+  const a = document.createElement('a'); a.href = URL.createObjectURL(new Blob([text], {type})); a.download = name;
+  document.body.appendChild(a); a.click(); setTimeout(() => { URL.revokeObjectURL(a.href); a.remove(); }, 1500);
+}
+function ask(msg, okText='ลบ', danger=true){
+  return new Promise(res => {
+    const el = $('#ask');
+    el.innerHTML = `<div class="dlg" role="alertdialog" aria-modal="true"><p>${esc(msg).replace(/\n/g,'<br>')}</p>
+      <div class="row gap mt8"><span class="ml"></span><button class="btn ghost" id="askNo">ยกเลิก</button>
+      <button class="btn ${danger ? 'danger' : 'pri'}" id="askYes">${esc(okText)}</button></div></div>`;
+    el.hidden = false; $('#askYes').focus();
+    const done = v => { el.hidden = true; el.innerHTML = ''; res(v); };
+    $('#askNo').onclick = () => done(false); $('#askYes').onclick = () => done(true);
+    el.onclick = e => { if (e.target === el) done(false); };
+  });
+}
+async function copyText(text){
+  try { await navigator.clipboard.writeText(text); toast('คัดลอกแล้ว ✓ วางใน LINE ได้เลย'); }
+  catch { const ta = document.createElement('textarea'); ta.value = text; document.body.appendChild(ta); ta.select();
+    try { document.execCommand('copy'); toast('คัดลอกแล้ว ✓'); } catch { toast('คัดลอกไม่ได้','bad'); } ta.remove(); }
+}
+
+/* ================= STATE ================= */
+let db = {trips:[], currentId:null};
+let rateCache = {rates:{}, updated:null, source:''};
+const ui = {view:'trips', expMode:'list', fCat:'', fWho:'', fQ:'', calDay:null, cvAmt:'1000', cvFrom:'THB', cvTo:'JPY', tpl:'mid', cmp:new Set(), lastDay:1};
+let M = null; // modal state
+let deferredPrompt = null;
+
+function save(){ try { localStorage.setItem(KEY, JSON.stringify(db)); } catch { toast('บันทึกไม่สำเร็จ: พื้นที่เต็ม','bad'); } }
+let saveT; function saveSoon(){ clearTimeout(saveT); saveT = setTimeout(save, 300); }
+function load(){
+  try { const d = JSON.parse(localStorage.getItem(KEY)); if (d && Array.isArray(d.trips)) db = d; } catch {}
+  try { const r = JSON.parse(localStorage.getItem(RKEY)); if (r && r.rates) rateCache = r; } catch {}
+}
+const cur = () => db.trips.find(t => t.id === db.currentId) || null;
+
+/* ================= RECEIPTS (IndexedDB) ================= */
+const IDB = {
+  db:null,
+  open(){
+    if (this.db) return Promise.resolve(this.db);
+    return new Promise((res, rej) => {
+      const r = indexedDB.open('tripbudget', 1);
+      r.onupgradeneeded = () => r.result.createObjectStore('receipts');
+      r.onsuccess = () => { this.db = r.result; res(this.db); };
+      r.onerror = () => rej(r.error);
+    });
+  },
+  async req(mode, fn){
+    const d = await this.open();
+    return new Promise((res, rej) => {
+      const tx = d.transaction('receipts', mode); const rq = fn(tx.objectStore('receipts'));
+      tx.oncomplete = () => res(rq.result); tx.onerror = () => rej(tx.error);
+    });
+  },
+  put(id, v){ return this.req('readwrite', s => s.put(v, id)); },
+  get(id){ return this.req('readonly', s => s.get(id)); },
+  del(id){ thumbCache.delete(id); return this.req('readwrite', s => s.delete(id)).catch(()=>{}); },
+  async all(){
+    const d = await this.open();
+    return new Promise((res, rej) => {
+      const out = {}; const tx = d.transaction('receipts','readonly'); const rq = tx.objectStore('receipts').openCursor();
+      rq.onsuccess = () => { const c = rq.result; if (c) { out[c.key] = c.value; c.continue(); } };
+      tx.oncomplete = () => res(out); tx.onerror = () => rej(tx.error);
+    });
+  }
+};
+const thumbCache = new Map();
+async function hydrateThumbs(root=document){
+  for (const img of $$('img[data-rid]', root)) {
+    if (img.getAttribute('src')) continue;
+    const id = img.dataset.rid; let v = thumbCache.get(id);
+    if (!v) { try { v = await IDB.get(id); } catch {} if (v) thumbCache.set(id, v); }
+    if (v) img.src = v; else img.alt = 'ไม่พบรูป';
+  }
+}
+function compressImage(file, max=1280, q=.72){
+  return new Promise((res, rej) => {
+    const fr = new FileReader();
+    fr.onload = () => {
+      const im = new Image();
+      im.onload = () => {
+        let w = im.width, h = im.height; const s = Math.min(1, max / Math.max(w, h)); w = Math.round(w*s); h = Math.round(h*s);
+        const c = document.createElement('canvas'); c.width = w; c.height = h; const x = c.getContext('2d');
+        x.fillStyle = '#fff'; x.fillRect(0,0,w,h); x.drawImage(im,0,0,w,h); res(c.toDataURL('image/jpeg', q));
+      };
+      im.onerror = rej; im.src = fr.result;
+    };
+    fr.onerror = rej; fr.readAsDataURL(file);
+  });
+}
+
+/* ================= RATES ================= */
+function getRate(code){ if (!code || code === 'THB') return 1; return rateCache.rates[code] || FALLBACK[code] || 0; }
+const isLive = code => !!rateCache.rates[code];
+async function fetchRates(silent){
+  const urls = ['https://open.er-api.com/v6/latest/THB', 'https://api.exchangerate-api.com/v4/latest/THB'];
+  for (const u of urls) {
+    try {
+      const r = await fetch(u, {cache:'no-store'}); if (!r.ok) continue;
+      const d = await r.json(); if (!d.rates) continue;
+      const rates = {}; for (const k in CURR) if (k !== 'THB' && d.rates[k]) rates[k] = 1 / d.rates[k];
+      rateCache = {rates, updated:new Date().toISOString(), source:new URL(u).hostname};
+      localStorage.setItem(RKEY, JSON.stringify(rateCache));
+      if (!silent) toast('อัปเดตเรทแล้ว ✓');
+      if (!M && ['currency','edit'].includes(ui.view)) render();
+      return true;
+    } catch {}
+  }
+  if (!silent) toast('ดึงเรทไม่ได้ ใช้เรทล่าสุดที่มี','warn');
+  return false;
+}
+function maybeRefreshRates(){
+  const age = rateCache.updated ? Date.now() - new Date(rateCache.updated) : Infinity;
+  if (navigator.onLine && age > 6*3600e3) fetchRates(true);
+}
+function rateStatus(code){
+  if (!code || code === 'THB') return '';
+  return isLive(code) ? `<span class="dot"></span>เรทกลางตลาด อัปเดต ${timeAgo(rateCache.updated)}` : `<span class="dot off"></span>เรทประมาณ (ยังไม่ได้ดึงเรทจริง)`;
+}
+
+/* ================= TRIP MATH ================= */
+function newTripObj(){
+  return {id:uid(), name:'', country:'', startDate:'', endDate:'', budget:0, mainCurr:'', currManual:false,
+    members:[{id:uid(), name:'ฉัน'}], flight:{airline:'',flightNo:'',price:0,baggage:0,insurance:0,visa:0,other:0},
+    hotels:[], expenses:[], createdAt:Date.now()};
+}
+function normalizeTrip(t){
+  t.id = t.id || uid();
+  ['name','country','startDate','endDate','mainCurr'].forEach(k => t[k] = t[k] || '');
+  t.budget = num(t.budget);
+  t.members = Array.isArray(t.members) && t.members.length ? t.members : [{id:uid(), name:'ฉัน'}];
+  t.flight = Object.assign({airline:'',flightNo:'',price:0,baggage:0,insurance:0,visa:0,other:0}, t.flight || {});
+  t.hotels = Array.isArray(t.hotels) ? t.hotels : [];
+  t.expenses = Array.isArray(t.expenses) ? t.expenses : [];
+  const ids = t.members.map(m => m.id);
+  t.hotels.forEach(h => {
+    h.id = h.id || uid(); h.curr = h.curr || 'THB'; h.nights = num(h.nights) || 1;
+    h.rate = h.curr === 'THB' ? 1 : (num(h.rate) || getRate(h.curr));
+    if (!ids.includes(h.paidBy)) h.paidBy = ids[0];
+  });
+  t.expenses.forEach(e => {
+    e.id = e.id || uid(); e.curr = e.curr || 'THB';
+    e.rate = e.curr === 'THB' ? 1 : (num(e.rate) || getRate(e.curr));
+    if (!CATS[e.cat]) e.cat = 'other'; if (!PAYS[e.pay]) e.pay = 'cash';
+    if (!ids.includes(e.paidBy)) e.paidBy = ids[0];
+    e.splitAmong = (e.splitAmong || []).filter(x => ids.includes(x)); if (!e.splitAmong.length) e.splitAmong = [...ids];
+    e.receipts = Array.isArray(e.receipts) ? e.receipts.filter(r => typeof r === 'string' && !r.startsWith('data:')) : [];
+    e.day = Math.max(1, parseInt(e.day) || 1);
+  });
+  return t;
+}
+const pax = t => Math.max(1, t.members.length);
+function days(t){
+  if (!t.startDate || !t.endDate) return 0;
+  const n = Math.round((new Date(t.endDate+'T00:00') - new Date(t.startDate+'T00:00')) / 864e5) + 1;
+  return n > 0 ? n : 0;
+}
+function dayDate(t, day){
+  if (!t.startDate) return '';
+  const d = new Date(t.startDate+'T00:00'); d.setDate(d.getDate() + day - 1);
+  return d.getFullYear()+'-'+String(d.getMonth()+1).padStart(2,'0')+'-'+String(d.getDate()).padStart(2,'0');
+}
+const flightTotal = t => { const f = t.flight; return num(f.price)*pax(t) + num(f.baggage) + num(f.insurance) + num(f.visa) + num(f.other); };
+const lineThb = x => num(x.amount) * (x.curr === 'THB' ? 1 : num(x.rate));
+const hotelThb = h => num(h.price) * (num(h.nights) || 1) * (h.curr === 'THB' ? 1 : num(h.rate));
+const hotelTotal = t => t.hotels.reduce((s, h) => s + hotelThb(h), 0);
+const expTotal = t => t.expenses.reduce((s, e) => s + lineThb(e), 0);
+const tripTotal = t => flightTotal(t) + hotelTotal(t) + expTotal(t);
+const memberName = (t, id) => (t.members.find(m => m.id === id) || {}).name || '?';
+const memberColor = (t, id) => COLORS[Math.max(0, t.members.findIndex(m => m.id === id)) % COLORS.length];
+
+function estimate(t, level){
+  const c = COUNTRIES[t.country]; if (!c) return null;
+  const L = LEVELS[level], p = pax(t), d = Math.max(1, days(t) || 1), n = Math.max(1, d - 1);
+  const [h, f, tr, a, fl] = c.t;
+  const r = {flight:fl*L.fm*p, hotel:h*L.m*p*n, food:f*L.m*p*d, transport:tr*L.m*p*d, activity:a*L.m*p*d};
+  r.total = r.flight + r.hotel + r.food + r.transport + r.activity; r.days = d; r.nights = n; r.pax = p;
+  return r;
+}
+function balances(t){
+  const bal = {}; t.members.forEach(m => bal[m.id] = {paid:0, share:0});
+  const add = (paidBy, among, amt) => {
+    const ids = (among && among.length ? among : t.members.map(m => m.id)).filter(id => bal[id]);
+    if (!ids.length || !amt) return;
+    if (bal[paidBy]) bal[paidBy].paid += amt;
+    ids.forEach(id => bal[id].share += amt / ids.length);
+  };
+  t.hotels.forEach(h => add(h.paidBy, null, hotelThb(h)));
+  t.expenses.forEach(e => add(e.paidBy, e.splitAmong, lineThb(e)));
+  return bal;
+}
+function settle(t){
+  const b = balances(t), cred = [], debt = [];
+  for (const id in b) { const n = b[id].paid - b[id].share; if (n > .5) cred.push({id, a:n}); else if (n < -.5) debt.push({id, a:-n}); }
+  cred.sort((x, y) => y.a - x.a); debt.sort((x, y) => y.a - x.a);
+  const out = []; let i = 0, j = 0;
+  while (i < debt.length && j < cred.length) {
+    const x = Math.min(debt[i].a, cred[j].a);
+    if (x > .5) out.push({from:debt[i].id, to:cred[j].id, amt:x});
+    debt[i].a -= x; cred[j].a -= x;
+    if (debt[i].a < .5) i++; if (cred[j].a < .5) j++;
+  }
+  return out;
+}
+
+function demoTrip(){
+  const me = uid(), fr = uid(), y = new Date().getFullYear(), r = getRate('JPY') || 0.22;
+  const t = newTripObj();
+  Object.assign(t, {name:'ตัวอย่าง: โตเกียว ใบไม้เปลี่ยนสี', country:'JP', mainCurr:'JPY', currManual:true,
+    startDate:`${y}-11-20`, endDate:`${y}-11-25`, budget:70000, members:[{id:me, name:'ฉัน'}, {id:fr, name:'เพื่อน'}],
+    flight:{airline:'Thai AirAsia X', flightNo:'XJ600', price:13500, baggage:1200, insurance:900, visa:0, other:700},
+    hotels:[{id:uid(), name:'โรงแรมย่านชินจูกุ', nights:5, price:14000, curr:'JPY', rate:r, paidBy:me}]});
+  const all = [me, fr];
+  const E = (day, name, cat, amount, pay, paidBy, note, curr, split) => t.expenses.push({id:uid(), day, name, cat, amount, pay, paidBy,
+    note:note || '', curr:curr || 'JPY', rate:curr === 'THB' ? 1 : r, splitAmong:split || all, receipts:[]});
+  E(1,'Skyliner สนามบิน → อุเอโนะ','transport',5160,'card',fr,'2 ที่');
+  E(1,'ราเมงร้านดัง','food',2560,'cash',me);
+  E(2,'เติมบัตร Suica','transport',4000,'cash',me);
+  E(2,'ซูชิสายพาน','food',4800,'card',fr);
+  E(3,'ตั๋วชมวิวตึกสูงชิบุยะ','activity',5200,'card',me);
+  E(3,'ร้านขายยา + ขนม','shopping',8900,'card',me,'ของฉันคนเดียว',null,[me]);
+  E(4,'ทริปไปคาวากุจิโกะ (บัสไป-กลับ)','transport',7600,'card',fr);
+  E(4,'อาหารเย็นยากินิกุ','food',9800,'promptpay',me);
+  E(5,'ของฝาก','shopping',6200,'cash',fr,'',null,[fr]);
+  E(5,'ซิมเน็ตเพิ่ม','other',299,'promptpay',me,'ซื้อจากไทย','THB');
+  return t;
+}
+
+/* ================= SHARED UI BITS ================= */
+function bar(pct, right){
+  const cls = pct > 100 ? 'bad' : pct > 80 ? 'warn' : '';
+  return `<div class="bar ${cls}"><i style="width:${Math.min(Math.max(pct,0),100)}%"></i></div><div class="barlbl"><span>ใช้ไป ${pct}%</span><span>${right || ''}</span></div>`;
+}
+function currOpts(sel, allowEmpty, pin){
+  const codes = Object.keys(CURR); const order = ['THB'];
+  if (pin && pin !== 'THB') order.push(pin);
+  codes.forEach(c => { if (!order.includes(c)) order.push(c); });
+  return (allowEmpty ? `<option value="">— เลือก —</option>` : '') +
+    order.map(c => `<option value="${c}" ${c === sel ? 'selected' : ''}>${c} · ${CURR[c].n}</option>`).join('');
+}
+const countryOpts = sel => `<option value="">— เลือกประเทศ —</option>` +
+  Object.entries(COUNTRIES).map(([k, c]) => `<option value="${k}" ${k === sel ? 'selected' : ''}>${c.f} ${c.n}</option>`).join('');
+const memberOpts = (t, sel) => t.members.map(m => `<option value="${m.id}" ${m.id === sel ? 'selected' : ''}>${esc(m.name || '?')}</option>`).join('');
+function dayOpts(t, sel){
+  const n = Math.max(days(t) || 14, sel || 1);
+  let h = ''; for (let i = 1; i <= n; i++) { const d = dayDate(t, i); h += `<option value="${i}" ${i === sel ? 'selected' : ''}>วันที่ ${i}${d ? ' · ' + thDate(d) : ''}</option>`; }
+  return h;
+}
+function needTrip(){
+  return `<div class="empty big"><div class="emo">🧳</div><b>ยังไม่ได้เลือกทริป</b><p>เลือกทริปจากหน้า "ทริป" หรือสร้างทริปใหม่</p>
+  <div class="row gap"><button class="btn ghost" data-act="go" data-v="trips">ดูทริปทั้งหมด</button><button class="btn pri" data-act="newTrip">+ สร้างทริป</button></div></div>`;
+}
+function brows(rows, total){
+  const max = Math.max(...rows.map(r => r[1]), 1);
+  return rows.map(([lb, v, col]) => `<div class="brow"><div class="lb">${lb}</div><div class="bar"><i style="width:${v/max*100}%;background:${col}"></i></div><div class="v mono">${money(v)}</div><div class="p">${total ? Math.round(v/total*100) + '%' : ''}</div></div>`).join('');
+}
+
+/* ================= VIEW: TRIPS ================= */
+function renderTrips(){
+  const list = db.trips;
+  let h = `<div class="pagehd"><div><h1>ทริปของฉัน</h1><div class="sub">${list.length ? list.length + ' ทริป' : 'ยังไม่มีทริป'}</div></div>
+  <div class="row gap">${list.length >= 2 ? `<button class="btn ghost sm" data-act="go" data-v="compare">⚖️ เทียบ</button>` : ''}<button class="btn pri sm" data-act="newTrip">+ ทริปใหม่</button></div></div>`;
+  if (!list.length) h += `<div class="empty big"><div class="emo">✈️</div><b>เริ่มวางแผนทริปแรก</b><p>ใส่ตั๋ว ที่พัก ค่าใช้จ่ายรายวัน ระบบแปลงเป็นเงินบาทให้อัตโนมัติ</p><div class="row gap"><button class="btn ghost" data-act="demo">👀 ดูทริปตัวอย่าง</button><button class="btn pri" data-act="newTrip">+ สร้างทริป</button></div></div>`;
+  for (const t of list) {
+    const c = COUNTRIES[t.country], tot = tripTotal(t), b = num(t.budget), pct = b ? Math.round(tot/b*100) : 0;
+    h += `<div class="card trip ${t.id === db.currentId ? 'on' : ''}" data-act="openTrip" data-id="${t.id}">
+      <div class="row"><div class="flag">${c ? c.f : '🌍'}</div>
+        <div class="grow"><div class="tname">${esc(t.name || 'ทริปไม่มีชื่อ')}</div>
+        <div class="meta">${t.startDate ? thDate(t.startDate) + ' – ' + (t.endDate ? thDate(t.endDate) : '?') : 'ยังไม่ระบุวัน'} · ${days(t) || '-'} วัน · ${pax(t)} คน${t.mainCurr ? ' · ' + t.mainCurr : ''}</div></div>
+        <div class="right"><div class="big mono">${money(tot)}</div>${b ? `<div class="meta">งบ ${money(b)}</div>` : ''}</div></div>
+      ${b ? bar(pct, pct > 100 ? '⚠️ เกินงบ ' + money(tot - b) : 'เหลือ ' + money(b - tot)) : ''}
+      <div class="row gap mt8"><button class="btn ghost xs" data-act="editTrip" data-id="${t.id}">✏️ แก้ไข</button>
+      <button class="btn ghost xs" data-act="dupTrip" data-id="${t.id}">📄 ทำสำเนา</button>
+      <button class="btn danger xs ml" data-act="delTrip" data-id="${t.id}">ลบ</button></div></div>`;
+  }
+  return h;
+}
+
+/* ================= VIEW: EDIT TRIP ================= */
+function memberRows(t){
+  return t.members.map((m, i) => `<div class="mrow"><span class="avatar" style="background:${COLORS[i % COLORS.length]}">${esc(initial(m.name))}</span>
+    <input data-m="${m.id}" value="${esc(m.name)}" placeholder="ชื่อ" maxlength="30">
+    <button class="btn danger xs" data-act="delMember" data-id="${m.id}" ${t.members.length < 2 ? 'disabled' : ''}>ลบ</button></div>`).join('');
+}
+function hotelRows(t){
+  if (!t.hotels.length) return `<div class="hint">ยังไม่มีที่พัก</div>`;
+  return t.hotels.map(h => `<div class="hrow grid2" data-hid="${h.id}">
+    <label class="full">ชื่อที่พัก<input data-hf="name" value="${esc(h.name)}" placeholder="เช่น Hotel Gracery Shinjuku"></label>
+    <label>จำนวนคืน<input type="number" inputmode="numeric" min="1" data-hf="nights" value="${h.nights}"></label>
+    <label>ราคา/คืน<input type="number" inputmode="decimal" data-hf="price" value="${h.price || ''}" placeholder="0"></label>
+    <label>สกุลเงิน<select data-hf="curr">${currOpts(h.curr, false, t.mainCurr)}</select></label>
+    <label>เรท (บาท/1 ${h.curr})<input type="number" inputmode="decimal" step="any" data-hf="rate" value="${h.curr === 'THB' ? 1 : rateInput(h.rate)}" ${h.curr === 'THB' ? 'disabled' : ''}></label>
+    ${t.members.length > 1 ? `<label class="full">ใครจ่าย (หารทุกคนเท่ากัน)<select data-hf="paidBy">${memberOpts(t, h.paidBy)}</select></label>` : ''}
+    <div class="hfoot"><b class="mono" id="hthb-${h.id}">= ${money(hotelThb(h))}</b><button class="btn danger xs" data-act="delHotel" data-id="${h.id}">ลบ</button></div></div>`).join('');
+}
+function tplBox(t){
+  if (!t.country) return `<div class="hint">เลือกประเทศก่อน ระบบจะประมาณงบให้ตามจำนวนวันและจำนวนคน</div>`;
+  const e = estimate(t, ui.tpl);
+  const rows = [['✈️ ตั๋วไป-กลับ', e.flight], [`🏨 ที่พัก (${e.nights} คืน)`, e.hotel], ['🍜 อาหาร', e.food], ['🚇 เดินทางในประเทศ', e.transport], ['🎟️ กิจกรรม/ค่าเข้า', e.activity]];
+  return `<div class="lvl">${Object.entries(LEVELS).map(([k, L]) => `<button class="${ui.tpl === k ? 'on' : ''}" data-act="tpl" data-l="${k}">${L.n}</button>`).join('')}</div>
+  <table>${rows.map(([n, v]) => `<tr><td>${n}</td><td class="r mono">${money(v)}</td></tr>`).join('')}
+  <tr><td><b>รวมประมาณ</b> <span class="meta">(${e.days} วัน · ${e.pax} คน)</span></td><td class="r mono"><b>${money(e.total)}</b></td></tr></table>
+  <div class="row gap mt8"><button class="btn ghost sm" data-act="useTpl">ใช้เป็นงบประมาณ</button><span class="meta">ต่อคน ≈ ${money(e.total/e.pax)}</span></div>
+  <div class="hint">ตัวเลขเป็นค่าประมาณคร่าวๆ สำหรับวางแผนเท่านั้น ราคาจริงขึ้นกับฤดูกาล เมือง และช่วงที่จอง</div>`;
+}
+function renderEdit(){
+  const t = cur(); if (!t) return needTrip();
+  const f = t.flight, ni = (k, v, ph) => `<input type="number" inputmode="decimal" data-f="${k}" value="${v || ''}" placeholder="${ph || '0'}">`;
+  return `<div class="pagehd"><div><h1>${t.name ? esc(t.name) : 'ทริปใหม่'}</h1><div class="sub">บันทึกอัตโนมัติทุกครั้งที่แก้</div></div>
+  <button class="btn pri sm" data-act="go" data-v="expenses">เสร็จ →</button></div>
+  <div class="card"><div class="hd">📍 ข้อมูลทริป</div><div class="grid2">
+    <label class="full">ชื่อทริป<input data-f="name" value="${esc(t.name)}" placeholder="เช่น โตเกียว ใบไม้เปลี่ยนสี" maxlength="60"></label>
+    <label>ประเทศ<select data-f="country">${countryOpts(t.country)}</select></label>
+    <label>สกุลเงินหลัก<select data-f="mainCurr">${currOpts(t.mainCurr, true)}</select></label>
+    <label>วันไป<input type="date" data-f="startDate" value="${t.startDate}"></label>
+    <label>วันกลับ<input type="date" data-f="endDate" value="${t.endDate}"></label>
+    <label class="full">งบประมาณรวม (บาท)${ni('budget', t.budget, 'เช่น 60000')}</label>
+  </div><div class="hint" id="rateHint">${editRateHint(t)}</div></div>
+
+  <div class="card"><div class="hd">👥 ผู้ร่วมทริป <span class="tag" id="paxTag">${pax(t)} คน</span></div>
+  <div id="memberRows">${memberRows(t)}</div>
+  <button class="btn ghost sm mt8" data-act="addMember">+ เพิ่มคน</button>
+  <div class="hint">ใช้คิดค่าตั๋วต่อคน และหารค่าใช้จ่ายในหน้า "หารเงิน"</div></div>
+
+  <div class="card"><div class="hd">🧮 ประมาณงบจากเทมเพลต</div><div id="tplBox">${tplBox(t)}</div></div>
+
+  <div class="card"><div class="hd">✈️ ตั๋วเครื่องบิน & ก่อนเดินทาง</div><div class="grid2">
+    <label>สายการบิน<input data-f="flight.airline" value="${esc(f.airline)}" placeholder="เช่น Thai AirAsia X"></label>
+    <label>เที่ยวบิน<input data-f="flight.flightNo" value="${esc(f.flightNo)}" placeholder="เช่น XJ600"></label>
+    <label>ราคาตั๋ว/คน (บาท)${ni('flight.price', f.price)}</label>
+    <label>สัมภาระเพิ่ม (รวม)${ni('flight.baggage', f.baggage)}</label>
+    <label>ประกันเดินทาง (รวม)${ni('flight.insurance', f.insurance)}</label>
+    <label>วีซ่า (รวม)${ni('flight.visa', f.visa)}</label>
+    <label class="full">อื่นๆ ก่อนเดินทาง (ซิม, ไปสนามบิน ฯลฯ รวม)${ni('flight.other', f.other)}</label>
+  </div><div class="sumline">รวม <b class="mono" id="flightTot">${money(flightTotal(t))}</b></div></div>
+
+  <div class="card"><div class="hd">🏨 ที่พักที่จองไว้</div><div id="hotelRows">${hotelRows(t)}</div>
+  <button class="btn ghost sm" data-act="addHotel">+ เพิ่มที่พัก</button>
+  <div class="sumline">รวม <b class="mono" id="hotelTot">${money(hotelTotal(t))}</b></div></div>
+
+  <button class="btn pri block" data-act="go" data-v="expenses">ไปบันทึกค่าใช้จ่าย →</button>`;
+}
+function editRateHint(t){
+  if (!t.mainCurr || t.mainCurr === 'THB') return 'เลือกสกุลเงินหลักเพื่อให้ระบบตั้งค่าเริ่มต้นตอนกรอกรายจ่าย';
+  return `1 ${t.mainCurr} = <b class="mono">${fmtRate(getRate(t.mainCurr))}</b> บาท · ${rateStatus(t.mainCurr)} · <button class="linkbtn" data-act="refreshRates">อัปเดต</button>`;
+}
+function refreshEditTotals(){
+  const t = cur(); if (!t || ui.view !== 'edit') return;
+  const set = (id, v) => { const el = $('#' + id); if (el) el.textContent = v; };
+  set('flightTot', money(flightTotal(t))); set('hotelTot', money(hotelTotal(t))); set('paxTag', pax(t) + ' คน');
+  t.hotels.forEach(h => set('hthb-' + h.id, '= ' + money(hotelThb(h))));
+  $('#tplBox').innerHTML = tplBox(t); $('#rateHint').innerHTML = editRateHint(t);
+}
+
+/* ================= VIEW: EXPENSES ================= */
+function budgetAlert(t){
+  const b = num(t.budget); if (!b) return '';
+  const tot = tripTotal(t), left = b - tot, d = days(t);
+  if (left < 0) return `<div class="alert bad">⚠️ เกินงบแล้ว ${money(-left)}</div>`;
+  let msg = '', cls = tot/b > .8 ? 'warn' : 'good';
+  if (d && t.startDate) {
+    const today = todayIso(); let remain = d;
+    if (today > t.endDate) remain = 0;
+    else if (today >= t.startDate) remain = Math.round((new Date(t.endDate+'T00:00') - new Date(today+'T00:00'))/864e5) + 1;
+    if (remain > 0) msg = `เหลือใช้ได้วันละ ${money(left/remain)} (อีก ${remain} วัน)`;
+  }
+  if (cls === 'warn') return `<div class="alert warn">⚡ ใช้งบไปแล้วเกิน 80%${msg ? ' · ' + msg : ''}</div>`;
+  return msg ? `<div class="alert good">✅ ${msg}</div>` : '';
+}
+function itemHtml(t, e){
+  const c = CATS[e.cat], multi = t.members.length > 1;
+  const who = multi ? ` · ${esc(memberName(t, e.paidBy))} จ่าย${e.splitAmong.length < t.members.length ? ' (หาร ' + e.splitAmong.length + ' คน)' : ''}` : '';
+  return `<div class="item" data-act="editExp" data-id="${e.id}">
+    <div class="ico" style="background:${c.c}1f">${c.i}</div>
+    <div class="grow"><div class="iname">${esc(e.name)}</div><div class="imeta">${PAYS[e.pay]}${who}${e.note ? ' · ' + esc(e.note) : ''}</div>
+    ${e.receipts.length ? `<div class="thumbs">${e.receipts.map(r => `<img data-rid="${r}" data-act="lightbox" alt="ใบเสร็จ">`).join('')}</div>` : ''}</div>
+    <div class="right"><div class="mono b">${money(lineThb(e))}</div>${e.curr !== 'THB' ? `<div class="imeta mono">${money(e.amount, e.curr)}</div>` : ''}</div></div>`;
+}
+function expListInner(t){
+  const q = ui.fQ.trim().toLowerCase();
+  let list = t.expenses.filter(e => (!ui.fCat || e.cat === ui.fCat) && (!ui.fWho || e.paidBy === ui.fWho) &&
+    (!q || (e.name + ' ' + e.note).toLowerCase().includes(q)));
+  if (!t.expenses.length) return `<div class="empty"><div class="emo" style="font-size:34px">📝</div>ยังไม่มีรายการ กดปุ่ม ＋ เพื่อเพิ่ม</div>`;
+  if (!list.length) return `<div class="empty">ไม่พบรายการที่ตรงกับตัวกรอง</div>`;
+  const by = {}; list.forEach(e => (by[e.day] = by[e.day] || []).push(e));
+  return Object.keys(by).sort((a, b) => a - b).map(d => {
+    const dd = dayDate(t, +d), sum = by[d].reduce((s, e) => s + lineThb(e), 0);
+    return `<div class="dayhd"><span>วันที่ ${d}${dd ? ' · ' + thDate(dd) : ''}</span><span class="mono">${money(sum)}</span></div>` + by[d].map(e => itemHtml(t, e)).join('');
+  }).join('') + (list.length !== t.expenses.length ? `<div class="hint right">แสดง ${list.length}/${t.expenses.length} รายการ · รวม ${money(list.reduce((s, e) => s + lineThb(e), 0))}</div>` : '');
+}
+function calendarHtml(t){
+  const d = days(t); if (!t.startDate || !d) return `<div class="empty">ตั้งวันไป–กลับในหน้าแก้ไขทริปก่อน <button class="linkbtn" data-act="go" data-v="edit">ไปตั้งค่า</button></div>`;
+  const byDay = {}; t.expenses.forEach(e => byDay[e.day] = (byDay[e.day] || 0) + lineThb(e));
+  const s = new Date(t.startDate+'T00:00'), en = new Date(t.endDate+'T00:00');
+  let h = '', m = new Date(s.getFullYear(), s.getMonth(), 1);
+  while (m <= en) {
+    h += `<div class="card"><div class="hd">${m.toLocaleDateString('th-TH', {month:'long', year:'numeric'})}</div><div class="cal">${['อา','จ','อ','พ','พฤ','ศ','ส'].map(x => `<div class="dow">${x}</div>`).join('')}`;
+    for (let i = 0; i < m.getDay(); i++) h += '<div></div>';
+    const last = new Date(m.getFullYear(), m.getMonth()+1, 0).getDate();
+    for (let k = 1; k <= last; k++) {
+      const dt = new Date(m.getFullYear(), m.getMonth(), k), idx = Math.round((dt - s)/864e5) + 1;
+      if (dt >= s && dt <= en) { const a = byDay[idx] || 0;
+        h += `<button class="cd in ${ui.calDay === idx ? 'sel' : ''}" data-act="calDay" data-d="${idx}"><span>${k}</span>${a ? `<b>${short(a)}</b>` : ''}</button>`;
+      } else h += `<div class="cd"><span>${k}</span></div>`;
+    }
+    h += '</div></div>'; m = new Date(m.getFullYear(), m.getMonth()+1, 1);
+  }
+  const extra = t.expenses.filter(e => e.day > d).length;
+  if (extra) h += `<div class="alert warn">มี ${extra} รายการที่อยู่นอกช่วงวันเดินทาง</div>`;
+  if (ui.calDay) {
+    const list = t.expenses.filter(e => e.day === ui.calDay);
+    h += `<div class="dayhd"><span>วันที่ ${ui.calDay} · ${thDate(dayDate(t, ui.calDay))}</span><span class="mono">${money(list.reduce((x, e) => x + lineThb(e), 0))}</span></div>` +
+      (list.length ? list.map(e => itemHtml(t, e)).join('') : `<div class="empty">ไม่มีรายการวันนี้</div>`);
+  } else h += `<div class="hint">แตะวันที่เพื่อดูรายการ</div>`;
+  return h;
+}
+function renderExpenses(){
+  const t = cur(); if (!t) return needTrip();
+  const tot = tripTotal(t), b = num(t.budget), spent = expTotal(t), d = days(t) || Math.max(1, ...t.expenses.map(e => e.day), 1);
+  let h = `<div class="pagehd"><div><h1>ค่าใช้จ่าย</h1><div class="sub">${esc(t.name || 'ทริปไม่มีชื่อ')}</div></div><button class="btn ghost sm" data-act="go" data-v="edit">✏️ ตั้งค่าทริป</button></div>
+  <div class="stats"><div><b class="mono">${money(tot)}</b><span>รวมทั้งทริป</span></div>
+  <div><b class="mono">${money(spent)}</b><span>ระหว่างเที่ยว</span></div>
+  <div><b class="mono">${money(spent/d)}</b><span>เฉลี่ย/วัน</span></div>
+  ${b ? `<div><b class="mono ${b - tot < 0 ? 'tbad' : 'tgood'}">${money(b - tot)}</b><span>งบคงเหลือ</span></div>` : `<div><b class="mono">${money(tot/pax(t))}</b><span>ต่อคน</span></div>`}</div>
+  ${b ? `<div class="card tight">${bar(Math.round(tot/b*100), 'งบ ' + money(b))}${budgetAlert(t)}</div>` : ''}
+  <div class="seg"><button class="${ui.expMode === 'list' ? 'on' : ''}" data-act="expMode" data-m="list">📋 รายการ</button><button class="${ui.expMode === 'cal' ? 'on' : ''}" data-act="expMode" data-m="cal">🗓️ ปฏิทิน</button></div>`;
+  if (ui.expMode === 'cal') h += calendarHtml(t);
+  else h += `<div class="filters"><input class="full" type="search" data-filter="fQ" value="${esc(ui.fQ)}" placeholder="🔍 ค้นหารายการ / หมายเหตุ">
+    <select data-filter="fCat"><option value="">ทุกหมวด</option>${Object.entries(CATS).map(([k, c]) => `<option value="${k}" ${ui.fCat === k ? 'selected' : ''}>${c.i} ${c.n}</option>`).join('')}</select>
+    <select data-filter="fWho" ${t.members.length < 2 ? 'disabled' : ''}><option value="">ทุกคนที่จ่าย</option>${t.members.map(m => `<option value="${m.id}" ${ui.fWho === m.id ? 'selected' : ''}>${esc(m.name)}</option>`).join('')}</select></div>
+    <div id="expList">${expListInner(t)}</div>`;
+  return h + `<button class="fab" data-act="addExp" aria-label="เพิ่มรายการ">＋</button>`;
+}
+
+/* ================= EXPENSE MODAL ================= */
+function defaultDay(t){
+  const d = days(t), today = todayIso();
+  if (d && today >= t.startDate && today <= t.endDate) return Math.round((new Date(today+'T00:00') - new Date(t.startDate+'T00:00'))/864e5) + 1;
+  return Math.min(ui.lastDay || 1, d || 99);
+}
+function modalThumbs(){ return M.receipts.map(id => `<div class="th"><img data-rid="${id}" data-act="lightbox" alt="ใบเสร็จ"><button data-act="mDelR" data-id="${id}" aria-label="ลบรูป">✕</button></div>`).join(''); }
+function renderModalThumbs(){ $('#m_thumbs').innerHTML = modalThumbs(); hydrateThumbs($('#m_thumbs')); }
+function openExp(id){
+  const t = cur(); if (!t) return;
+  const e = id ? t.expenses.find(x => x.id === id) : null;
+  const mc = t.mainCurr || 'THB';
+  const x = e ? {...e} : {name:'', amount:'', curr:mc, rate:getRate(mc), cat:'food', pay:'cash', day:defaultDay(t), paidBy:t.members[0].id, splitAmong:t.members.map(m => m.id), note:'', receipts:[]};
+  M = {id:e ? e.id : null, receipts:[...x.receipts], added:[], removed:[], cat:x.cat};
+  const multi = t.members.length > 1;
+  $('#modal').innerHTML = `<div class="sheet" role="dialog" aria-modal="true">
+    <div class="sheethd"><b>${e ? 'แก้ไขรายการ' : 'เพิ่มรายการ'}</b><button class="x" data-act="closeExp" aria-label="ปิด">✕</button></div>
+    <label>ชื่อรายการ<input id="m_name" value="${esc(x.name)}" placeholder="เช่น ราเมงมื้อเที่ยง (เว้นว่าง = ใช้ชื่อหมวด)" maxlength="80"></label>
+    <div class="grid2"><label>จำนวนเงิน<input id="m_amount" type="number" inputmode="decimal" step="any" value="${x.amount}" placeholder="0"></label>
+    <label>สกุลเงิน<select id="m_curr">${currOpts(x.curr, false, t.mainCurr)}</select></label></div>
+    <div class="raterow" id="m_rateRow"><label>เรท: 1 <span id="m_cc">${x.curr}</span> = ? บาท<input id="m_rate" type="number" inputmode="decimal" step="any" value="${rateInput(x.rate)}"></label>
+    <button class="btn ghost xs" data-act="mRateNow">ใช้เรทล่าสุด</button></div>
+    <div class="preview" id="m_prev"></div>
+    <div class="lbl">หมวดหมู่</div>
+    <div class="chips" id="m_cats">${Object.entries(CATS).map(([k, c]) => `<button class="chip ${k === x.cat ? 'on' : ''}" data-act="mCat" data-c="${k}">${c.i} ${c.n}</button>`).join('')}</div>
+    <div class="grid2"><label>วันที่ของทริป<select id="m_day">${dayOpts(t, x.day)}</select></label>
+    <label>วิธีจ่าย<select id="m_pay">${Object.entries(PAYS).map(([k, v]) => `<option value="${k}" ${k === x.pay ? 'selected' : ''}>${v}</option>`).join('')}</select></label></div>
+    ${multi ? `<label>ใครจ่าย<select id="m_paidBy">${memberOpts(t, x.paidBy)}</select></label>
+    <div class="lbl">หารกับใคร <button class="linkbtn" data-act="mAll">เลือกทุกคน</button></div>
+    <div class="chips" id="m_split">${t.members.map(m => `<label class="chip ck"><input type="checkbox" value="${m.id}" ${x.splitAmong.includes(m.id) ? 'checked' : ''}>${esc(m.name)}</label>`).join('')}</div>` : ''}
+    <label>หมายเหตุ<input id="m_note" value="${esc(x.note)}" placeholder="ไม่บังคับ" maxlength="120"></label>
+    <div class="lbl">ใบเสร็จ / รูป</div><div class="thumbs" id="m_thumbs">${modalThumbs()}</div>
+    <label class="upload">📷 ถ่ายรูป / แนบใบเสร็จ<input type="file" accept="image/*" multiple id="m_file" hidden></label>
+    ${!e ? `<details class="repeat"><summary>🔁 เพิ่มซ้ำหลายวัน (เช่น ค่าอาหาร 3 มื้อทุกวัน)</summary>
+      <label>เพิ่มซ้ำทุกวันจนถึง<select id="m_repeat"><option value="">ไม่ซ้ำ</option>${dayOpts(t, 0).replace(/ selected/g, '')}</select></label></details>` : ''}
+    <div class="sheetft">${e ? `<button class="btn danger" data-act="delExp">ลบ</button>` : ''}<span class="ml"></span>
+    <button class="btn ghost" data-act="closeExp">ยกเลิก</button><button class="btn pri" data-act="saveExp">บันทึก</button></div></div>`;
+  $('#modal').hidden = false; document.body.classList.add('noscroll');
+  modalPreview(); hydrateThumbs($('#modal'));
+  if (!e) setTimeout(() => $('#m_amount') && $('#m_amount').focus(), 120);
+}
+function modalPreview(){
+  const curr = $('#m_curr').value, amt = num($('#m_amount').value), rate = num($('#m_rate').value);
+  $('#m_rateRow').hidden = curr === 'THB'; $('#m_cc').textContent = curr;
+  const prev = $('#m_prev');
+  if (curr === 'THB') { prev.textContent = ''; return; }
+  const live = getRate(curr), diff = live && rate ? Math.abs(rate - live) / live : 0;
+  prev.innerHTML = (amt ? `= ${money(amt * rate)}` : '') + (diff > .03 ? ` <span class="meta">(ต่างจากเรทล่าสุด ${(diff*100).toFixed(1)}% — ปกติถ้าใช้เรทร้านแลกเงิน)</span>` : '');
+}
+function closeExp(cancel){
+  if (cancel && M) M.added.forEach(id => IDB.del(id));
+  M = null; $('#modal').hidden = true; $('#modal').innerHTML = ''; document.body.classList.remove('noscroll');
+}
+function saveExp(){
+  const t = cur(); if (!t || !M) return;
+  const amount = num($('#m_amount').value);
+  if (amount <= 0) { toast('ใส่จำนวนเงินก่อน','bad'); $('#m_amount').focus(); return; }
+  const curr = $('#m_curr').value, rate = curr === 'THB' ? 1 : num($('#m_rate').value);
+  if (rate <= 0) { toast('ใส่เรทแลกเงินก่อน','bad'); $('#m_rate').focus(); return; }
+  const split = $('#m_split') ? $$('#m_split input:checked').map(i => i.value) : t.members.map(m => m.id);
+  if (!split.length) { toast('เลือกคนที่หารอย่างน้อย 1 คน','bad'); return; }
+  const day = +$('#m_day').value || 1;
+  const base = {name:$('#m_name').value.trim() || CATS[M.cat].n, amount, curr, rate, cat:M.cat, pay:$('#m_pay').value, day,
+    paidBy:$('#m_paidBy') ? $('#m_paidBy').value : t.members[0].id, splitAmong:split, note:$('#m_note').value.trim()};
+  let msg = 'บันทึกแล้ว ✓';
+  if (M.id) { Object.assign(t.expenses.find(x => x.id === M.id), base, {receipts:M.receipts}); }
+  else {
+    const rep = +($('#m_repeat') ? $('#m_repeat').value : 0), end = rep > day ? rep : day;
+    for (let d = day; d <= end; d++) t.expenses.push({id:uid(), ...base, day:d, receipts:d === day ? M.receipts : []});
+    if (end > day) msg = `เพิ่ม ${end - day + 1} รายการ (วันที่ ${day}–${end}) ✓`;
+    ui.lastDay = day;
+  }
+  M.removed.forEach(id => IDB.del(id)); M.added = [];
+  save(); closeExp(false); render(); toast(msg);
+}
+async function addReceipts(files){
+  for (const f of files) {
+    try { const data = await compressImage(f); const id = uid(); await IDB.put(id, data); thumbCache.set(id, data);
+      if (!M) { IDB.del(id); return; } M.receipts.push(id); M.added.push(id); }
+    catch { toast('แนบรูปไม่สำเร็จ','bad'); }
+  }
+  if (M) renderModalThumbs();
+}
+
+/* ================= VIEW: SPLIT ================= */
+function renderSplit(){
+  const t = cur(); if (!t) return needTrip();
+  const hd = `<div class="pagehd"><div><h1>หารเงิน</h1><div class="sub">${esc(t.name || 'ทริปไม่มีชื่อ')}</div></div></div>`;
+  if (t.members.length < 2) return hd + `<div class="empty big"><div class="emo">🤝</div><b>เพิ่มผู้ร่วมทริปก่อน</b><p>ใส่ชื่อเพื่อนในหน้าตั้งค่าทริป แล้วระบุว่าใครจ่ายอะไรตอนเพิ่มรายการ</p><button class="btn pri" data-act="go" data-v="edit">+ เพิ่มคน</button></div>`;
+  const b = balances(t), tx = settle(t);
+  let h = hd + `<div class="card"><div class="hd">💸 ใครต้องโอนให้ใคร</div>` +
+    (tx.length ? tx.map(x => `<div class="xfer"><span class="avatar" style="background:${memberColor(t, x.from)}">${esc(initial(memberName(t, x.from)))}</span>
+      <div class="grow"><b>${esc(memberName(t, x.from))}</b> <span class="arrow">→ โอนให้ →</span> <b>${esc(memberName(t, x.to))}</b></div><b class="mono">${money(x.amt)}</b></div>`).join('')
+      + `<button class="btn ghost sm mt8" data-act="copySettle">📋 คัดลอกไปส่งใน LINE</button>`
+    : `<div class="alert good">✅ ทุกคนเคลียร์กันแล้ว ไม่มีใครต้องโอน</div>`) + `</div>`;
+  h += `<div class="card"><div class="hd">📒 ยอดแต่ละคน</div><div class="scrollx"><table><tr><th>ชื่อ</th><th class="r">จ่ายไป</th><th class="r">ส่วนของตัวเอง</th><th class="r">สุทธิ</th></tr>` +
+    t.members.map(m => { const x = b[m.id], n = x.paid - x.share;
+      return `<tr><td>${esc(m.name)}</td><td class="r mono">${money(x.paid)}</td><td class="r mono">${money(x.share)}</td><td class="r mono ${n >= 0 ? 'tgood' : 'tbad'}">${n >= 0 ? '+' : ''}${money(n)}</td></tr>`; }).join('') +
+    `</table></div><div class="hint">+ = ได้เงินคืน · − = ต้องจ่ายเพิ่ม · รวมที่พักที่จองไว้ (หารทุกคนเท่ากัน) และรายการระหว่างเที่ยว · ค่าตั๋วเครื่องบินคิดแยกรายคน ไม่นำมาหาร</div></div>`;
+  return h;
+}
+function settleText(t){
+  const tx = settle(t);
+  return `🤝 สรุปหารเงิน — ${t.name || 'ทริป'}\n` + (tx.length ? tx.map(x => `• ${memberName(t, x.from)} โอนให้ ${memberName(t, x.to)} ${money(x.amt)}`).join('\n') : 'ทุกคนเคลียร์กันแล้ว') + `\n(คำนวณด้วย TripBudget)`;
+}
+
+/* ================= VIEW: CURRENCY ================= */
+function quickAmounts(r){ return r < .01 ? [10000,50000,100000,500000,1000000] : r < .1 ? [1000,5000,10000,50000,100000] : r < 1 ? [100,500,1000,5000,10000] : [1,10,50,100,500,1000]; }
+function renderCurrency(){
+  const t = cur(), mc = t && t.mainCurr && t.mainCurr !== 'THB' ? t.mainCurr : '';
+  let h = `<div class="pagehd"><div><h1>แปลงสกุลเงิน</h1><div class="sub">${rateCache.updated ? 'เรทอัปเดต ' + timeAgo(rateCache.updated) : 'ยังไม่ได้ดึงเรทจริง'}</div></div><button class="btn ghost sm" data-act="refreshRates">🔄 อัปเดต</button></div>
+  <div class="card"><label>จำนวนเงิน<input type="number" inputmode="decimal" step="any" data-cv="cvAmt" value="${esc(ui.cvAmt)}"></label>
+  <div class="row gap mt8" style="align-items:flex-end"><label class="grow">จาก<select data-cv="cvFrom">${currOpts(ui.cvFrom, false, mc)}</select></label>
+  <button class="iconbtn" data-act="cvSwap" aria-label="สลับ" style="margin-bottom:2px">⇄</button>
+  <label class="grow">เป็น<select data-cv="cvTo">${currOpts(ui.cvTo, false, mc)}</select></label></div>
+  <div class="cvres mono" id="cvRes"></div><div class="hint" id="cvNote" style="text-align:center"></div></div>`;
+  if (mc) {
+    const r = getRate(mc), sym = CURR[mc].s;
+    h += `<div class="grid2" style="align-items:start">
+    <div class="card"><div class="hd">${mc} → บาท</div><table>${quickAmounts(r).map(a => `<tr><td class="mono">${money(a, mc)}</td><td class="r mono">${money(a*r)}</td></tr>`).join('')}</table></div>
+    <div class="card"><div class="hd">บาท → ${mc}</div><table>${[100,300,500,1000,2000,5000].map(a => `<tr><td class="mono">${money(a)}</td><td class="r mono">${sym}${fmt(a/r, ZERO_DEC.has(mc) ? 0 : 2)}</td></tr>`).join('')}</table></div></div>`;
+  }
+  h += `<div class="card"><div class="hd">อัตราทุกสกุล (บาทต่อ 1 หน่วย)</div><div class="ratesgrid">${Object.keys(CURR).filter(c => c !== 'THB').map(c => `<div><span><span class="dot ${isLive(c) ? '' : 'off'}"></span>${c}</span><b class="mono">${fmtRate(getRate(c))}</b></div>`).join('')}</div>
+  <div class="hint">● เขียว = เรทจริงจาก ${esc(rateCache.source || 'open.er-api.com')} · ● เทา = เรทประมาณ · เป็นเรทกลางตลาด เรทร้านแลกเงิน/บัตรจริงจะต่างไปเล็กน้อย</div></div>`;
+  return h;
+}
+function updateCv(){
+  const el = $('#cvRes'); if (!el) return;
+  const a = num(ui.cvAmt), rf = getRate(ui.cvFrom), rt = getRate(ui.cvTo);
+  if (!rf || !rt) { el.textContent = '—'; return; }
+  el.textContent = `${money(a, ui.cvFrom)} = ${money(a*rf/rt, ui.cvTo)}`;
+  $('#cvNote').textContent = `1 ${ui.cvFrom} = ${fmtRate(rf/rt)} ${ui.cvTo}`;
+}
+
+/* ================= VIEW: SUMMARY ================= */
+function summaryData(t){
+  const F = flightTotal(t), H = hotelTotal(t), E = expTotal(t), T = F + H + E;
+  const cat = {}; t.expenses.forEach(e => cat[e.cat] = (cat[e.cat] || 0) + lineThb(e));
+  return {F, H, E, T, cat};
+}
+function renderSummary(){
+  const t = cur(); if (!t) return needTrip();
+  const c = COUNTRIES[t.country], p = pax(t), d = days(t) || 1, {F, H, E, T, cat} = summaryData(t), b = num(t.budget);
+  const catRows = [['✈️ ตั๋ว & ก่อนเดินทาง', F, '#0e9f9a'], ['🏨 ที่พักที่จองไว้', H, '#8b6cf0'],
+    ...Object.entries(cat).map(([k, v]) => [CATS[k].i + ' ' + CATS[k].n, v, CATS[k].c])].filter(r => r[1] > 0).sort((a, b) => b[1] - a[1]);
+  const pay = {}; t.expenses.forEach(e => pay[e.pay] = (pay[e.pay] || 0) + lineThb(e));
+  const dayT = {}; t.expenses.forEach(e => dayT[e.day] = (dayT[e.day] || 0) + lineThb(e));
+  const bal = balances(t), fEach = num(t.flight.price) + (num(t.flight.baggage) + num(t.flight.insurance) + num(t.flight.visa) + num(t.flight.other)) / p;
+  const curs = {}; t.expenses.forEach(e => { if (e.curr !== 'THB') curs[e.curr] = (curs[e.curr] || 0) + num(e.amount); });
+  let h = `<div class="pagehd"><div><h1>สรุปทริป</h1><div class="sub">${esc(t.name || 'ทริปไม่มีชื่อ')}</div></div>
+  <div class="row gap"><button class="btn ghost sm" data-act="copySummary">📋 คัดลอก</button><button class="btn ghost sm" data-act="print">🖨️</button></div></div>
+  <div class="card"><div class="row"><div class="flag">${c ? c.f : '🌍'}</div><div class="grow"><div class="tname">${esc(t.name || 'ทริปไม่มีชื่อ')}</div>
+  <div class="meta">${t.startDate ? thDate(t.startDate) + ' – ' + thDate(t.endDate) + ' · ' : ''}${days(t) || '-'} วัน · ${p} คน${t.flight.airline ? ' · ✈️ ' + esc(t.flight.airline) + ' ' + esc(t.flight.flightNo) : ''}</div></div></div></div>
+  <div class="card" style="border-color:var(--acc)"><table>
+    <tr><td>✈️ ตั๋ว & ก่อนเดินทาง</td><td class="r mono">${money(F)}</td></tr>
+    <tr><td>🏨 ที่พักที่จองไว้</td><td class="r mono">${money(H)}</td></tr>
+    <tr><td>📋 ค่าใช้จ่ายระหว่างเที่ยว (${t.expenses.length} รายการ)</td><td class="r mono">${money(E)}</td></tr>
+    ${b ? `<tr><td class="meta">งบประมาณ</td><td class="r mono meta">${money(b)}</td></tr>` : ''}
+    <tr><td><b style="font-size:16px">💰 รวมทั้งสิ้น</b></td><td class="r mono"><b style="font-size:20px;color:var(--acc)">${money(T)}</b></td></tr></table>
+    ${b ? (T > b ? `<div class="alert bad">⚠️ เกินงบ ${money(T - b)} (${Math.round(T/b*100)}%)</div>` : `<div class="alert good">✅ อยู่ในงบ เหลือ ${money(b - T)} (ใช้ไป ${Math.round(T/b*100)}%)</div>`) : ''}</div>
+  <div class="stats"><div><b class="mono">${money(T/p)}</b><span>ต่อคน</span></div><div><b class="mono">${money(T/d)}</b><span>ต่อวัน</span></div><div><b class="mono">${money(T/d/p)}</b><span>ต่อวันต่อคน</span></div></div>`;
+  if (catRows.length) h += `<div class="card"><div class="hd">📂 แยกตามหมวด</div>${brows(catRows, T)}</div>`;
+  if (Object.keys(pay).length) h += `<div class="card"><div class="hd">💳 แยกตามวิธีจ่าย (ระหว่างเที่ยว)</div>${brows(Object.entries(pay).map(([k, v]) => [PAYS[k], v, '#2563eb']), E)}</div>`;
+  if (Object.keys(dayT).length) h += `<div class="card"><div class="hd">📅 รายวัน</div>${brows(Object.keys(dayT).sort((a, b) => a - b).map(k => ['วันที่ ' + k + (dayDate(t, +k) ? ' · ' + thDate(dayDate(t, +k)) : ''), dayT[k], '#0e9f9a']), E)}</div>`;
+  if (p > 1) h += `<div class="card"><div class="hd">👥 ค่าใช้จ่ายของแต่ละคน</div>${brows(t.members.map(m => [esc(m.name), bal[m.id].share + fEach, memberColor(t, m.id)]), T)}<div class="hint">= ส่วนแบ่งที่พัก + รายการที่หาร + ค่าตั๋วของตัวเอง</div></div>`;
+  if (Object.keys(curs).length) h += `<div class="card"><div class="hd">💴 ใช้เงินต่างประเทศไปทั้งหมด</div><table>${Object.entries(curs).map(([k, v]) => `<tr><td>${k} · ${CURR[k] ? CURR[k].n : ''}</td><td class="r mono">${money(v, k)}</td></tr>`).join('')}</table></div>`;
+  h += `<button class="btn ghost block" data-act="csv">📥 ดาวน์โหลดรายการเป็น CSV (เปิดใน Excel/Sheets)</button>`;
+  return h;
+}
+function summaryText(t){
+  const {F, H, E, T, cat} = summaryData(t), p = pax(t);
+  return `✈️ ${t.name || 'ทริป'}${t.startDate ? ` (${thDate(t.startDate)}–${thDate(t.endDate)})` : ''}\n` +
+    `💰 รวม ${money(T)}${p > 1 ? ` · ต่อคน ${money(T/p)}` : ''}\n` +
+    `• ตั๋ว & ก่อนเดินทาง ${money(F)}\n• ที่พัก ${money(H)}\n• ระหว่างเที่ยว ${money(E)}\n` +
+    Object.entries(cat).sort((a, b) => b[1] - a[1]).map(([k, v]) => `   - ${CATS[k].n} ${money(v)}`).join('\n') +
+    (num(t.budget) ? `\n📊 งบ ${money(t.budget)} · ${T > t.budget ? 'เกิน ' + money(T - t.budget) : 'เหลือ ' + money(t.budget - T)}` : '');
+}
+function exportCSV(){
+  const t = cur(); if (!t) return;
+  const q = v => '"' + String(v ?? '').replace(/"/g, '""') + '"';
+  const rows = [['วันที่ของทริป','วันที่','รายการ','หมวด','วิธีจ่าย','ผู้จ่าย','หารกับ','จำนวน','สกุลเงิน','เรท (บาท/หน่วย)','บาท','หมายเหตุ']];
+  [...t.expenses].sort((a, b) => a.day - b.day).forEach(e => rows.push([e.day, dayDate(t, e.day), e.name, CATS[e.cat].n, PAYS[e.pay].replace(/^\S+\s/, ''), memberName(t, e.paidBy),
+    e.splitAmong.map(id => memberName(t, id)).join(' / '), e.amount, e.curr, e.rate, lineThb(e).toFixed(2), e.note]));
+  t.hotels.forEach(h => rows.push(['', '', 'ที่พัก: ' + h.name, 'ที่พัก (จองไว้)', '', memberName(t, h.paidBy), 'ทุกคน', num(h.price)*num(h.nights), h.curr, h.rate, hotelThb(h).toFixed(2), h.nights + ' คืน']));
+  rows.push(['', '', 'ตั๋วเครื่องบิน & ก่อนเดินทาง', 'ตั๋ว', '', '', '', flightTotal(t), 'THB', 1, flightTotal(t).toFixed(2), t.flight.airline + ' ' + t.flight.flightNo]);
+  download((t.name || 'trip') + '_ค่าใช้จ่าย.csv', '\uFEFF' + rows.map(r => r.map(q).join(',')).join('\n'), 'text/csv;charset=utf-8');
+  toast('ดาวน์โหลด CSV แล้ว ✓');
+}
+
+/* ================= VIEW: COMPARE ================= */
+function renderCompare(){
+  const list = db.trips;
+  const hd = `<div class="pagehd"><div><h1>เปรียบเทียบทริป</h1><div class="sub">แตะเพื่อเลือก/ไม่เลือก</div></div><button class="btn ghost sm" data-act="go" data-v="trips">← ทริป</button></div>`;
+  if (list.length < 2) return hd + `<div class="empty big"><div class="emo">⚖️</div><b>ต้องมีอย่างน้อย 2 ทริป</b><p>ลองสร้างทริปทางเลือก หรือกด "ทำสำเนา" แล้วเปลี่ยนประเทศดู</p></div>`;
+  for (const id of [...ui.cmp]) if (!list.some(t => t.id === id)) ui.cmp.delete(id);
+  if (!ui.cmp.size) list.slice(0, 2).forEach(t => ui.cmp.add(t.id));
+  const sel = list.filter(t => ui.cmp.has(t.id));
+  let h = hd + `<div class="chips">${list.map(t => `<button class="chip ${ui.cmp.has(t.id) ? 'on' : ''}" data-act="cmpToggle" data-id="${t.id}">${(COUNTRIES[t.country] || {f:'🌍'}).f} ${esc(t.name || 'ทริปไม่มีชื่อ')}</button>`).join('')}</div>`;
+  if (sel.length < 2) return h + `<div class="empty">เลือกอย่างน้อย 2 ทริป</div>`;
+  const cols = sel.map((t, i) => ({t, col:COLORS[i % COLORS.length], T:tripTotal(t), d:days(t) || 1, p:pax(t)}));
+  h += `<div class="card"><div class="hd">💰 รวมทั้งทริป</div>${brows(cols.map(x => [esc(x.t.name || 'ทริป'), x.T, x.col]))}</div>
+  <div class="card"><div class="hd">👤 ต่อคนต่อวัน (เทียบความคุ้ม)</div>${brows(cols.map(x => [esc(x.t.name || 'ทริป'), x.T/x.d/x.p, x.col]))}</div>`;
+  const rows = [['จำนวนวัน', x => x.d + ' วัน'], ['จำนวนคน', x => x.p + ' คน'], ['งบประมาณ', x => x.t.budget ? money(x.t.budget) : '-'],
+    ['ตั๋ว & ก่อนเดินทาง', x => money(flightTotal(x.t))], ['ที่พัก', x => money(hotelTotal(x.t))], ['ระหว่างเที่ยว', x => money(expTotal(x.t))],
+    ['<b>รวม</b>', x => '<b>' + money(x.T) + '</b>'], ['ต่อคน', x => money(x.T/x.p)], ['ต่อวัน/คน', x => money(x.T/x.d/x.p)],
+    ['หมวดที่จ่ายมากสุด', x => { const c = Object.entries(summaryData(x.t).cat).sort((a, b) => b[1] - a[1])[0]; return c ? CATS[c[0]].i + ' ' + CATS[c[0]].n : '-'; }]];
+  h += `<div class="card"><div class="scrollx"><table><tr><th></th>${cols.map(x => `<th class="r" style="color:${x.col}">${esc(x.t.name || 'ทริป')}</th>`).join('')}</tr>` +
+    rows.map(([l, f]) => `<tr><td class="meta">${l}</td>${cols.map(x => `<td class="r mono">${f(x)}</td>`).join('')}</tr>`).join('') + `</table></div></div>`;
+  return h;
+}
+
+/* ================= BACKUP ================= */
+async function exportData(){
+  let receipts = {}; try { receipts = await IDB.all(); } catch {}
+  const data = {app:'TripBudget', version:3, exportedAt:new Date().toISOString(), trips:db.trips, receipts};
+  download(`tripbudget-backup-${todayIso()}.json`, JSON.stringify(data), 'application/json');
+  toast('สำรองข้อมูลแล้ว ✓ เก็บไฟล์ไว้ใน Google Drive ได้');
+}
+async function fromV2(o){
+  const members = Array.from({length:Math.max(1, parseInt(o.travelers) || 1)}, (_, i) => ({id:uid(), name:i ? 'เพื่อน ' + i : 'ฉัน'}));
+  const ids = members.map(m => m.id), mc = String(o.curr || '').toUpperCase(), r = num(o.rate) || getRate(mc);
+  const conv = c => c === 'FOREIGN' && mc ? mc : 'THB';
+  const t = {id:o.id || uid(), name:o.name || '', country:o.country || '', startDate:o.startDate || '', endDate:o.endDate || '', budget:num(o.budget),
+    mainCurr:CURR[mc] ? mc : '', currManual:true, members,
+    flight:{airline:o.airline || '', flightNo:o.flightNo || '', price:num(o.flightPrice), baggage:num(o.baggage), insurance:num(o.insurance), visa:num(o.visa), other:num(o.preflightOther)},
+    hotels:(o.hotels || []).map(h => ({id:h.id || uid(), name:h.name || '', nights:num(h.nights) || 1, price:num(h.price), curr:conv(h.curr), rate:conv(h.curr) === 'THB' ? 1 : r, paidBy:ids[0]})),
+    expenses:[], createdAt:Date.now()};
+  for (const e of o.expenses || []) {
+    const rec = [];
+    for (const src of e.receipts || []) if (typeof src === 'string' && src.startsWith('data:')) { const id = uid(); try { await IDB.put(id, src); rec.push(id); } catch {} }
+    t.expenses.push({id:e.id || uid(), name:e.name || '', cat:e.cat, pay:e.pay, amount:num(e.amount), curr:conv(e.curr), rate:conv(e.curr) === 'THB' ? 1 : r,
+      day:e.day || 1, paidBy:ids[0], splitAmong:ids, note:e.note || '', receipts:rec});
+  }
+  return t;
+}
+async function importFile(file){
+  let data; try { data = JSON.parse(await file.text()); } catch { toast('ไฟล์ไม่ถูกต้อง','bad'); return; }
+  const isOld = Array.isArray(data), trips = isOld ? data : (data && Array.isArray(data.trips) ? data.trips : null);
+  if (!trips || !trips.length) { toast('ไม่พบทริปในไฟล์','warn'); return; }
+  if (!await ask(`นำเข้า ${trips.length} ทริป?\nทริปที่มีอยู่แล้ว (ID เดียวกัน) จะถูกแทนที่ด้วยข้อมูลจากไฟล์`, 'นำเข้า', false)) return;
+  let incoming = [];
+  if (isOld) { for (const o of trips) incoming.push(await fromV2(o)); }
+  else { for (const [id, v] of Object.entries(data.receipts || {})) { try { await IDB.put(id, v); } catch {} } incoming = trips; }
+  for (const t of incoming.map(normalizeTrip)) { const i = db.trips.findIndex(x => x.id === t.id); if (i >= 0) db.trips[i] = t; else db.trips.push(t); }
+  save(); go('trips'); toast(`นำเข้า ${incoming.length} ทริปแล้ว ✓`);
+}
+
+/* ================= RENDER / NAV ================= */
+const VIEWS = {trips:renderTrips, edit:renderEdit, expenses:renderExpenses, split:renderSplit, currency:renderCurrency, summary:renderSummary, compare:renderCompare};
+function render(){
+  const v = VIEWS[ui.view] ? ui.view : 'trips';
+  $('#view').innerHTML = VIEWS[v]();
+  const navKey = v === 'edit' || v === 'compare' ? 'trips' : v;
+  $$('.nav button').forEach(b => b.classList.toggle('on', b.dataset.v === navKey));
+  const t = cur(); $('#tbTitle').textContent = t ? (COUNTRIES[t.country] || {f:'🌍'}).f + ' ' + (t.name || 'ทริปไม่มีชื่อ') : '';
+  hydrateThumbs($('#view')); if (v === 'currency') updateCv();
+}
+function go(v){ ui.view = v; if (v !== 'expenses') ui.calDay = null; render(); window.scrollTo(0, 0); }
+const closeMenu = () => { $('#menu').hidden = true; };
+
+const A = {
+  go: el => go(el.dataset.v),
+  newTrip(){ const t = newTripObj(); db.trips.unshift(t); db.currentId = t.id; save(); go('edit'); },
+  openTrip(el){ db.currentId = el.dataset.id; ui.fCat = ui.fWho = ui.fQ = ''; save(); go('expenses'); },
+  editTrip(el){ db.currentId = el.dataset.id; save(); go('edit'); },
+  demo(){ const t = demoTrip(); db.trips.unshift(t); db.currentId = t.id; save(); go('summary'); toast('เพิ่มทริปตัวอย่างแล้ว ลบทิ้งได้ทุกเมื่อ'); },
+  dupTrip(el){
+    const s = db.trips.find(x => x.id === el.dataset.id); if (!s) return;
+    const c = JSON.parse(JSON.stringify(s)); c.id = uid(); c.name = (s.name || 'ทริป') + ' (สำเนา)'; c.expenses = []; c.createdAt = Date.now();
+    db.trips.unshift(c); save(); render(); toast('ทำสำเนาแล้ว (ไม่รวมรายการค่าใช้จ่าย)');
+  },
+  async delTrip(el){
+    const t = db.trips.find(x => x.id === el.dataset.id); if (!t) return;
+    if (!await ask(`ลบทริป "${t.name || 'ทริปไม่มีชื่อ'}"?\nลบแล้วกู้คืนไม่ได้ (ยกเว้นมีไฟล์สำรอง)`, 'ลบทริป')) return;
+    t.expenses.forEach(e => e.receipts.forEach(r => IDB.del(r)));
+    db.trips = db.trips.filter(x => x !== t); if (db.currentId === t.id) db.currentId = null;
+    save(); render(); toast('ลบทริปแล้ว','warn');
+  },
+  addMember(){ const t = cur(); t.members.push({id:uid(), name:'เพื่อน ' + t.members.length}); save(); $('#memberRows').innerHTML = memberRows(t); $('#hotelRows').innerHTML = hotelRows(t); refreshEditTotals(); },
+  async delMember(el){
+    const t = cur(); if (t.members.length < 2) return; const id = el.dataset.id;
+    if (!await ask(`ลบ "${memberName(t, id)}"?\nรายการที่คนนี้จ่ายจะย้ายไปเป็นของคนแรก`)) return;
+    t.members = t.members.filter(m => m.id !== id); const first = t.members[0].id;
+    t.hotels.forEach(h => { if (h.paidBy === id) h.paidBy = first; });
+    t.expenses.forEach(e => { if (e.paidBy === id) e.paidBy = first; e.splitAmong = e.splitAmong.filter(x => x !== id); if (!e.splitAmong.length) e.splitAmong = t.members.map(m => m.id); });
+    save(); $('#memberRows').innerHTML = memberRows(t); $('#hotelRows').innerHTML = hotelRows(t); refreshEditTotals();
+  },
+  addHotel(){ const t = cur(), c = t.mainCurr || 'THB'; t.hotels.push({id:uid(), name:'', nights:Math.max(1, days(t) - 1), price:0, curr:c, rate:getRate(c), paidBy:t.members[0].id}); save(); $('#hotelRows').innerHTML = hotelRows(t); refreshEditTotals(); },
+  delHotel(el){ const t = cur(); t.hotels = t.hotels.filter(h => h.id !== el.dataset.id); save(); $('#hotelRows').innerHTML = hotelRows(t); refreshEditTotals(); },
+  tpl(el){ ui.tpl = el.dataset.l; $('#tplBox').innerHTML = tplBox(cur()); },
+  useTpl(){ const t = cur(), e = estimate(t, ui.tpl); if (!e) return; t.budget = Math.ceil(e.total/1000)*1000; save(); const i = $('[data-f="budget"]'); if (i) i.value = t.budget; toast('ตั้งงบเป็น ' + money(t.budget) + ' แล้ว'); },
+  refreshRates(){ closeMenu(); toast('กำลังดึงเรท...'); fetchRates(false); },
+  exportData(){ closeMenu(); exportData(); },
+  importData(){ closeMenu(); $('#importFile').click(); },
+  async install(){ closeMenu(); if (!deferredPrompt) return; deferredPrompt.prompt(); await deferredPrompt.userChoice; deferredPrompt = null; $('#installBtn').hidden = true; },
+  menu(){ $('#menu').hidden = !$('#menu').hidden; },
+  expMode(el){ ui.expMode = el.dataset.m; render(); },
+  calDay(el){ ui.calDay = +el.dataset.d; render(); },
+  addExp(){ openExp(null); },
+  editExp(el){ openExp(el.dataset.id); },
+  closeExp(){ closeExp(true); },
+  saveExp(){ saveExp(); },
+  async delExp(){
+    const t = cur(), e = M && t.expenses.find(x => x.id === M.id); if (!e || !await ask(`ลบ "${e.name}"?`)) return;
+    [...e.receipts, ...M.added].forEach(r => IDB.del(r)); t.expenses = t.expenses.filter(x => x !== e);
+    M.added = []; save(); closeExp(false); render(); toast('ลบรายการแล้ว','warn');
+  },
+  mCat(el){ M.cat = el.dataset.c; $$('#m_cats .chip').forEach(c => c.classList.toggle('on', c.dataset.c === M.cat)); },
+  mAll(){ $$('#m_split input').forEach(i => i.checked = true); },
+  mRateNow(){ $('#m_rate').value = rateInput(getRate($('#m_curr').value)); modalPreview(); },
+  mDelR(el){
+    const id = el.dataset.id; M.receipts = M.receipts.filter(x => x !== id);
+    if (M.added.includes(id)) { M.added = M.added.filter(x => x !== id); IDB.del(id); } else M.removed.push(id);
+    renderModalThumbs();
+  },
+  lightbox(el){ if (!el.src) return; $('#lbImg').src = el.src; $('#lightbox').hidden = false; },
+  closeLb(){ $('#lightbox').hidden = true; },
+  cvSwap(){ [ui.cvFrom, ui.cvTo] = [ui.cvTo, ui.cvFrom]; render(); },
+  copySettle(){ copyText(settleText(cur())); },
+  copySummary(){ copyText(summaryText(cur())); },
+  csv(){ exportCSV(); },
+  print(){ window.print(); },
+  cmpToggle(el){ const id = el.dataset.id; ui.cmp.has(id) ? ui.cmp.delete(id) : ui.cmp.add(id); render(); }
+};
+
+/* ================= EVENTS ================= */
+document.addEventListener('click', e => {
+  if (e.target.id === 'modal') { closeExp(true); return; }
+  const el = e.target.closest('[data-act]');
+  if (!el || !el.closest('#menu') && el.dataset.act !== 'menu') closeMenu();
+  if (!el) return;
+  if (el.disabled) return;
+  const f = A[el.dataset.act]; if (f) { if (el.tagName === 'IMG') e.stopPropagation(); f(el, e); }
+});
+document.addEventListener('input', e => {
+  const el = e.target, t = cur();
+  if (el.dataset.f && t) {
+    const f = el.dataset.f, v = el.type === 'number' ? num(el.value) : el.value;
+    if (f.startsWith('flight.')) t.flight[f.slice(7)] = v; else t[f] = v;
+    if (f === 'country') { const c = COUNTRIES[v]; if (c && c.c && !t.currManual) { t.mainCurr = c.c; const s = $('[data-f="mainCurr"]'); if (s) s.value = c.c; } }
+    if (f === 'mainCurr') t.currManual = true;
+    if (f === 'name' || f === 'country') { $('#tbTitle').textContent = (COUNTRIES[t.country] || {f:'🌍'}).f + ' ' + (t.name || 'ทริปไม่มีชื่อ'); }
+    saveSoon(); refreshEditTotals(); return;
+  }
+  if (el.dataset.m && t) { const m = t.members.find(x => x.id === el.dataset.m); if (m) { m.name = el.value; saveSoon(); } return; }
+  if (el.dataset.hf && t) {
+    const h = t.hotels.find(x => x.id === el.closest('[data-hid]').dataset.hid); if (!h) return;
+    const k = el.dataset.hf; h[k] = ['nights','price','rate'].includes(k) ? num(el.value) : el.value;
+    if (k === 'curr') { h.rate = getRate(h.curr); save(); $('#hotelRows').innerHTML = hotelRows(t); }
+    saveSoon(); refreshEditTotals(); return;
+  }
+  if (el.dataset.filter && t) { ui[el.dataset.filter] = el.value; $('#expList').innerHTML = expListInner(t); hydrateThumbs($('#expList')); return; }
+  if (el.dataset.cv) { ui[el.dataset.cv] = el.value; updateCv(); return; }
+  if (el.closest('#modal')) {
+    if (el.id === 'm_curr') $('#m_rate').value = rateInput(getRate(el.value));
+    modalPreview();
+  }
+});
+document.addEventListener('change', e => {
+  const el = e.target;
+  if (el.dataset.m && ui.view === 'edit') { const t = cur(); save(); $('#memberRows').innerHTML = memberRows(t); $('#hotelRows').innerHTML = hotelRows(t); }
+  if (el.id === 'm_file' && el.files.length) { addReceipts([...el.files]); el.value = ''; }
+  if (el.id === 'importFile' && el.files[0]) { importFile(el.files[0]); el.value = ''; }
+});
+document.addEventListener('keydown', e => {
+  if (e.key !== 'Escape') return;
+  if (!$('#lightbox').hidden) { $('#lightbox').hidden = true; return; }
+  if (M) closeExp(true); closeMenu();
+});
+function setOnline(){ $('#offline').hidden = navigator.onLine; }
+window.addEventListener('online', () => { setOnline(); maybeRefreshRates(); });
+window.addEventListener('offline', setOnline);
+window.addEventListener('beforeinstallprompt', e => { e.preventDefault(); deferredPrompt = e; $('#installBtn').hidden = false; });
+window.addEventListener('appinstalled', () => { $('#installBtn').hidden = true; toast('ติดตั้งแล้ว ✓'); });
+window.addEventListener('beforeunload', save);
+document.addEventListener('visibilitychange', () => { if (document.visibilityState === 'hidden') save(); });
+
+/* ================= BOOT ================= */
+(async function boot(){
+  load();
+  if (!localStorage.getItem(KEY) && localStorage.getItem(OLD_KEY)) {
+    try {
+      const old = JSON.parse(localStorage.getItem(OLD_KEY));
+      if (Array.isArray(old) && old.length) { for (const o of old) db.trips.push(await fromV2(o)); save(); toast(`ย้ายข้อมูลเดิม ${old.length} ทริปมาแล้ว ✓`); }
+    } catch {}
+  }
+  db.trips = db.trips.map(normalizeTrip);
+  if (db.currentId && !cur()) db.currentId = null;
+  ui.view = db.currentId ? 'expenses' : 'trips';
+  render(); setOnline(); maybeRefreshRates();
+  if (navigator.storage && navigator.storage.persist) navigator.storage.persist().catch(() => {});
+  if ('serviceWorker' in navigator && /^https?:$/.test(location.protocol)) navigator.serviceWorker.register('sw.js').catch(() => {});
+})();
+</script>
+</body>
+</html>

@@ -1,0 +1,17 @@
+{
+  "name": "TripBudget — งบเที่ยวต่างประเทศ",
+  "short_name": "TripBudget",
+  "description": "วางแผนและบันทึกค่าใช้จ่ายเที่ยวต่างประเทศ แปลงสกุลเงิน หารเงินกับเพื่อน",
+  "start_url": "./",
+  "scope": "./",
+  "display": "standalone",
+  "orientation": "portrait",
+  "background_color": "#f5f6f8",
+  "theme_color": "#0e9f9a",
+  "lang": "th",
+  "icons": [
+    {"src": "icons/icon-192.png", "sizes": "192x192", "type": "image/png"},
+    {"src": "icons/icon-512.png", "sizes": "512x512", "type": "image/png"},
+    {"src": "icons/maskable-512.png", "sizes": "512x512", "type": "image/png", "purpose": "maskable"}
+  ]
+}
