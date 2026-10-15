@@ -145,6 +145,16 @@ main{max-width:720px;margin:0 auto;padding:16px}
 .tog input{width:auto;min-height:0;accent-color:var(--acc)}
 
 /* nav */
+.chip.ck input{width:auto;min-height:0;accent-color:var(--acc)}
+.avatar{width:32px;height:32px;border-radius:50%;color:#fff;display:grid;place-items:center;font-weight:700;font-size:14px;flex-shrink:0}
+.xfer{display:flex;align-items:center;gap:10px;padding:12px 0;border-bottom:1px solid var(--line)}.xfer:last-child{border-bottom:none}
+.cal{display:grid;grid-template-columns:repeat(7,1fr);gap:4px}.dow{text-align:center;font-size:11.5px;color:var(--ink3);padding-bottom:4px}
+.cd{min-height:54px;border-radius:9px;padding:4px 5px;font-size:11.5px;color:var(--ink3);display:flex;flex-direction:column;align-items:flex-start;text-align:left}
+.cd.in{background:var(--acc-soft);color:var(--ink);cursor:pointer}.cd.in b{font-size:10.5px;color:var(--acc-ink);font-family:var(--f-num);margin-top:auto}.cd.sel{outline:2px solid var(--acc)}.cd.today{box-shadow:inset 0 0 0 1.5px var(--warn)}
+table.t{width:100%;border-collapse:collapse;font-size:13.5px}table.t th{font-size:12px;color:var(--ink3);font-weight:600;text-align:left;padding:6px 6px;border-bottom:1px solid var(--line);white-space:nowrap}
+table.t td{padding:9px 6px;border-bottom:1px solid var(--line)}table.t td.num{white-space:nowrap}table.t tr:last-child td{border-bottom:none}table.t .r{text-align:right}
+.brow{display:flex;align-items:center;gap:10px;padding:7px 0}.brow .lb{width:118px;font-size:13px;flex-shrink:0;white-space:nowrap;overflow:hidden;text-overflow:ellipsis}.brow .bar{flex:1}.brow .v{width:92px;text-align:right;font-size:13px}
+.tgood{color:var(--good)}.tbad{color:var(--bad)}
 .nav{position:fixed;left:0;right:0;bottom:0;z-index:60;background:#fff;border-top:1px solid var(--line);display:flex;justify-content:center;padding-bottom:env(safe-area-inset-bottom,0px)}
 .nav button{flex:1;max-width:160px;height:var(--nav);display:flex;flex-direction:column;align-items:center;justify-content:center;gap:2px;font-size:12px;font-weight:600;color:var(--ink3);position:relative}
 .nav button span{font-size:22px;line-height:1;filter:grayscale(1);opacity:.55}
@@ -190,7 +200,7 @@ main{max-width:720px;margin:0 auto;padding:16px}
     <button data-act="exportData">💾 สำรองข้อมูล (.json)</button>
     <button data-act="importData">📂 กู้คืนข้อมูล</button>
     <button data-act="install" id="installBtn" hidden>📲 ติดตั้งเป็นแอป</button>
-    <div class="ft">ข้อมูลเก็บในเครื่องนี้เท่านั้น · v4.0</div>
+    <div class="ft">ข้อมูลเก็บในเครื่องนี้เท่านั้น · v4.1</div>
   </div>
   <input type="file" id="importFile" accept=".json,application/json" hidden>
 </header>
@@ -312,7 +322,7 @@ function download(name, text, type){
 /* ============ STATE ============ */
 let db = {trips:[], currentId:null, templates:null};
 let rates = {rates:{}, at:null};
-const ui = {view:'trips', packFilter:'todo', tplGroup:'common', expCat:'', form:null};
+const ui = {view:'trips', packFilter:'todo', tplGroup:'common', expCat:'', form:null, expMode:'list', calDay:null, cmp:new Set()};
 let deferredPrompt = null, S = null, dlgFetched = 0; // S = open sheet state
 
 function save(){ try { localStorage.setItem(KEY, JSON.stringify(db)); } catch { toast('บันทึกไม่สำเร็จ พื้นที่ในเครื่องเต็ม','bad'); } }
@@ -380,6 +390,27 @@ const budgetOf = (t, k) => k === 'food' ? num(t.budget.food) * days(t) : num(t.b
 const budgetTotal = t => Object.keys(BCATS).reduce((s, k) => s + budgetOf(t, k), 0);
 const usedOf = (t, k) => t.expenses.filter(e => e.cat === k).reduce((s, e) => s + expThb(e), 0);
 const usedTotal = t => t.expenses.reduce((s, e) => s + expThb(e), 0);
+const COLORS = ['#0e8f8a','#6d4ae0','#b86200','#2563eb','#c0306f','#16834a','#8a5a2b','#5a6b8a'];
+const pax = t => Math.max(1, t.members.length);
+const mName = (t, id) => (t.members.find(m => m.id === id) || {}).name || '?';
+const mColor = (t, id) => COLORS[Math.max(0, t.members.findIndex(m => m.id === id)) % COLORS.length];
+const initial = s => { const a = [...String(s || '?').replace(/^[เแโใไ]+/, '')]; return a[0] || '?'; };
+const avatar = (t, id) => `<span class="avatar" style="background:${mColor(t, id)}">${esc(initial(mName(t, id)))}</span>`;
+function balances(t){
+  const b = {}; t.members.forEach(m => b[m.id] = {paid:0, share:0});
+  t.expenses.forEach(e => { const amt = expThb(e), among = (e.splitAmong || []).filter(id => b[id]); const ids = among.length ? among : t.members.map(m => m.id);
+    if (b[e.paidBy]) b[e.paidBy].paid += amt; ids.forEach(id => b[id].share += amt / ids.length); });
+  return b;
+}
+function settle(t){
+  const b = balances(t), cr = [], db_ = [];
+  for (const id in b) { const n = b[id].paid - b[id].share; if (n > .5) cr.push({id, a:n}); else if (n < -.5) db_.push({id, a:-n}); }
+  cr.sort((x, y) => y.a - x.a); db_.sort((x, y) => y.a - x.a);
+  const out = []; let i = 0, j = 0;
+  while (i < db_.length && j < cr.length) { const x = Math.min(db_[i].a, cr[j].a); if (x > .5) out.push({from:db_[i].id, to:cr[j].id, amt:x});
+    db_[i].a -= x; cr[j].a -= x; if (db_[i].a < .5) i++; if (cr[j].a < .5) j++; }
+  return out;
+}
 
 function groupsFor(type, abroad){
   const g = ['common']; if (['leisure','business','relative'].includes(type)) g.push(type);
@@ -418,8 +449,11 @@ function normalizeTrip(t){
   t.budget = Object.assign({ticket:0, hotel:0, food:0, transport:0, shopping:0, other:0}, t.budget || {});
   t.packing = Array.isArray(t.packing) ? t.packing : [];
   t.packing.forEach(p => { p.id = p.id || uid(); p.cat = PACK_CATS[p.cat] ? p.cat : 'other'; p.qty = num(p.qty); p.perDay = !!p.perDay; p.buy = BCATS[p.buy] ? p.buy : ''; p.key = p.key || ''; p.checked = !!p.checked; p.expId = p.expId || ''; });
+  t.members = Array.isArray(t.members) && t.members.length ? t.members.map(m => ({id:m.id || uid(), name:String(m.name || '').trim() || '?'})) : [{id:uid(), name:'ฉัน'}];
+  const ids = t.members.map(m => m.id);
   t.expenses = Array.isArray(t.expenses) ? t.expenses : [];
-  t.expenses.forEach(e => { e.id = e.id || uid(); e.cat = BCATS[e.cat] ? e.cat : 'other'; e.curr = e.curr || 'THB';
+  t.expenses.forEach(e => { e.id = e.id || uid();
+    if (!ids.includes(e.paidBy)) e.paidBy = ids[0]; e.splitAmong = (e.splitAmong || []).filter(x => ids.includes(x)); if (!e.splitAmong.length) e.splitAmong = [...ids]; e.cat = BCATS[e.cat] ? e.cat : 'other'; e.curr = e.curr || 'THB';
     e.rate = e.curr === 'THB' ? 1 : (num(e.rate) || t.rate); e.day = Math.max(0, parseInt(e.day) || 0); e.name = e.name || BCATS[e.cat].n;
     e.note = e.note || ''; e.receipts = Array.isArray(e.receipts) ? e.receipts.filter(r => typeof r === 'string' && !r.startsWith('data:')) : []; });
   t.tipsDone = t.tipsDone || {};
@@ -427,7 +461,7 @@ function normalizeTrip(t){
 }
 function newTrip(f){
   const t = normalizeTrip({id:uid(), name:f.name, type:f.type, country:f.country, currency:f.currency, rate:f.rate, rateAt:f.rateAt,
-    startDate:f.startDate, days:f.days, createdAt:Date.now()});
+    startDate:f.startDate, days:f.days, members:f.members, createdAt:Date.now()});
   t.packing = tplItemsFor(t);
   return t;
 }
@@ -440,16 +474,16 @@ function fromV3(o){
   let d = 1;
   if (o.startDate && o.endDate) d = Math.round((new Date(o.endDate + 'T00:00') - new Date(o.startDate + 'T00:00')) / 864e5) + 1;
   else d = Math.max(1, ...(o.expenses || []).map(e => parseInt(e.day) || 1));
-  const pax = Math.max(1, (o.members || []).length);
+  const pax_ = Math.max(1, (o.members || []).length), first = ((o.members || [])[0] || {}).id;
   const t = {id:o.id || uid(), name:o.name || '', type:c !== 'TH' ? 'abroad' : 'leisure', country:c, currency, rate:anyRate(currency),
-    startDate:o.startDate || '', days:Math.max(1, d), createdAt:o.createdAt || Date.now(), budget:{other:num(o.budget)}, expenses:[], packing:[]};
-  const f = o.flight || {}, add = (name, cat, amount, curr='THB', rate=1, note='') => { if (num(amount) > 0) t.expenses.push({id:uid(), name, cat, amount:num(amount), curr, rate, day:0, note, receipts:[]}); };
-  add(('ตั๋วเครื่องบิน ' + (f.airline || '') + ' ' + (f.flightNo || '')).trim(), 'ticket', num(f.price) * pax, 'THB', 1, pax > 1 ? pax + ' คน' : '');
+    startDate:o.startDate || '', days:Math.max(1, d), createdAt:o.createdAt || Date.now(), budget:{other:num(o.budget)}, members:o.members || [], expenses:[], packing:[]};
+  const f = o.flight || {}, add = (name, cat, amount, curr='THB', rate=1, note='', paidBy=first) => { if (num(amount) > 0) t.expenses.push({id:uid(), name, cat, amount:num(amount), curr, rate, day:0, note, paidBy, receipts:[]}); };
+  add(('ตั๋วเครื่องบิน ' + (f.airline || '') + ' ' + (f.flightNo || '')).trim(), 'ticket', num(f.price) * pax_, 'THB', 1, pax_ > 1 ? pax_ + ' คน' : '');
   add('สัมภาระเพิ่ม', 'ticket', f.baggage); add('ประกันการเดินทาง', 'other', f.insurance); add('วีซ่า', 'other', f.visa); add('ค่าใช้จ่ายก่อนเดินทาง', 'other', f.other);
-  (o.hotels || []).forEach(h => add('ที่พัก ' + (h.name || ''), 'hotel', num(h.price) * (num(h.nights) || 1), h.curr || 'THB', h.curr === 'THB' ? 1 : num(h.rate), (num(h.nights) || 1) + ' คืน'));
+  (o.hotels || []).forEach(h => add('ที่พัก ' + (h.name || ''), 'hotel', num(h.price) * (num(h.nights) || 1), h.curr || 'THB', h.curr === 'THB' ? 1 : num(h.rate), (num(h.nights) || 1) + ' คืน', h.paidBy || first));
   const map = {food:'food', transport:'transport', shopping:'shopping', hotel:'hotel', activity:'other', other:'other'};
   (o.expenses || []).forEach(e => t.expenses.push({id:e.id || uid(), name:e.name || '', cat:map[e.cat] || 'other', amount:num(e.amount), curr:e.curr || 'THB',
-    rate:e.curr === 'THB' ? 1 : num(e.rate), day:Math.max(1, parseInt(e.day) || 1), note:e.note || '', receipts:e.receipts || []}));
+    rate:e.curr === 'THB' ? 1 : num(e.rate), day:Math.max(1, parseInt(e.day) || 1), note:e.note || '', paidBy:e.paidBy, splitAmong:e.splitAmong, receipts:e.receipts || []}));
   normalizeTrip(t); t.packing = tplItemsFor(t);
   return t;
 }
@@ -507,7 +541,7 @@ const pct = (a, b) => b ? Math.round(a / b * 100) : 0;
 /* ============ VIEW: TRIPS ============ */
 function vTrips(){
   let h = `<div class="hd"><div><h1>ทริปของฉัน</h1><div class="muted">${db.trips.length ? db.trips.length + ' ทริป' : 'เริ่มจากสร้างทริปแรก'}</div></div>
-    <button class="btn pri" data-act="newTrip">+ ทริปใหม่</button></div>`;
+    <div class="row">${db.trips.length > 1 ? '<button class="btn ghost sm" data-act="go" data-v="compare">⚖️ เทียบ</button>' : ''}<button class="btn pri" data-act="newTrip">+ ทริปใหม่</button></div></div>`;
   if (!db.trips.length) return h + `<div class="empty"><div class="e">✈️</div><b>วางแผนทริปในที่เดียว</b>
     <p>สร้างทริปแล้วได้ลิสต์เตรียมของตามประเภททริป ตั้งงบและบันทึกรายจ่าย ถ้าไปต่างประเทศมีเคล็ดลับให้ด้วย</p>
     <button class="btn pri" data-act="newTrip">+ สร้างทริป</button></div>`;
@@ -517,7 +551,7 @@ function vTrips(){
     const tipsN = isAbroad(t) ? tipItems(t).length : 0, tipsD = isAbroad(t) ? tipItems(t).filter(x => t.tipsDone[x.id]).length : 0;
     h += `<div class="card trip ${t.id === db.currentId ? 'cur' : ''}" data-act="openTrip" data-id="${t.id}">
       <div class="row"><span class="flag">${c ? c.f : '🌍'}</span><div class="grow"><b>${esc(t.name || 'ทริปไม่มีชื่อ')}</b>
-      <div class="muted">${TYPES[t.type].n} · ${t.startDate ? thDate(t.startDate) + ' · ' : ''}${days(t)} วัน</div></div>
+      <div class="muted">${TYPES[t.type].n} · ${t.startDate ? thDate(t.startDate) + ' · ' : ''}${days(t)} วัน${pax(t) > 1 ? ' · ' + pax(t) + ' คน' : ''}</div></div>
       <div class="right"><b class="num">${esc(cd.big)}</b><div class="muted small">${esc(cd.lbl)}</div></div></div>
       <div class="mini"><div>เตรียมของ<b class="num">${done}/${t.packing.length}</b><div class="bar good"><i style="width:${pct(done, t.packing.length)}%"></i></div></div>
       <div>ใช้งบ<b class="num">${money(u)}</b><div class="bar ${barCls(pct(u, bt))}"><i style="width:${Math.min(100, pct(u, bt))}%"></i></div></div>
@@ -528,8 +562,8 @@ function vTrips(){
 
 /* ============ VIEW: TRIP FORM ============ */
 function tripFormState(t){
-  return t ? {id:t.id, name:t.name, type:t.type, country:t.country, currency:t.currency, rate:t.rate, rateAt:t.rateAt || '', startDate:t.startDate, days:days(t)}
-    : {id:null, name:'', type:'leisure', country:'TH', currency:'THB', rate:1, rateAt:'', startDate:'', days:3};
+  return t ? {id:t.id, name:t.name, type:t.type, country:t.country, currency:t.currency, rate:t.rate, rateAt:t.rateAt || '', startDate:t.startDate, days:days(t), members:clone(t.members)}
+    : {id:null, name:'', type:'leisure', country:'TH', currency:'THB', rate:1, rateAt:'', startDate:'', days:3, members:[{id:uid(), name:'ฉัน'}]};
 }
 function vForm(){
   const f = ui.form; if (!f) return needTrip();
@@ -553,6 +587,12 @@ function vForm(){
       ${pi ? `<div class="small mt-s">🔌 ${pi.types} — ${pi.need}${pi.volt}</div>` : ''}</div>` : ''}
     ${f.type === 'abroad' && !ab ? `<div class="alert warn">ทริปต่างประเทศ เลือกประเทศปลายทางด้วยนะ</div>` : ''}
   </div>
+  <div class="card"><div class="ch"><h2>👥 ผู้ร่วมทริป</h2><span class="tag">${f.members.length} คน</span></div>
+    ${f.members.map((m, i) => `<div class="row" style="margin-bottom:8px"><span class="avatar" style="background:${COLORS[i % COLORS.length]}">${esc(initial(m.name))}</span>
+      <input data-fm="${i}" value="${esc(m.name)}" placeholder="ชื่อ" maxlength="30" aria-label="ชื่อผู้ร่วมทริป ${i + 1}">
+      <button class="btn danger sm" data-act="fDelM" data-i="${i}" ${f.members.length < 2 ? 'disabled' : ''}>ลบ</button></div>`).join('')}
+    <button class="btn ghost sm" data-act="fAddM">+ เพิ่มคน</button>
+    <div class="muted small mt-s">ใช้หารรายจ่ายกันในหน้า "หารเงิน" ถ้าไปคนเดียวไม่ต้องเพิ่ม</div></div>
   <button class="btn pri block" data-act="saveForm">${f.id ? 'บันทึก' : 'สร้างทริป'}</button>
   ${f.id ? `<button class="btn danger block mt" data-act="delTrip">ลบทริปนี้</button>` : ''}`;
 }
@@ -621,11 +661,12 @@ async function toggleItem(t, p){
       const ab = isAbroad(t) && t.currency !== 'THB';
       const r = await dialog({title:`บันทึก "${p.name}" เป็นรายจ่ายไหม?`, text:`จะลงในหมวด ${BCATS[p.buy].n}`,
         body:`<div class="g2"><label class="f">จำนวนเงิน<input name="amount" type="number" inputmode="decimal" step="any" placeholder="0" class="num"></label>
-        <label class="f">สกุล<select name="curr"><option value="THB">฿ บาท</option>${ab ? `<option value="${t.currency}">${t.currency}</option>` : ''}</select></label></div>`,
+        <label class="f">สกุล<select name="curr"><option value="THB">฿ บาท</option>${ab ? `<option value="${t.currency}">${t.currency}</option>` : ''}</select></label>
+        ${t.members.length > 1 ? `<label class="f full">ใครจ่าย (หารทุกคน)<select name="paidBy">${t.members.map(m => `<option value="${m.id}">${esc(m.name)}</option>`).join('')}</select></label>` : ''}</div>`,
         ok:'บันทึกรายจ่าย', cancel:'ข้าม'});
       if (r) {
         const amt = num(r.amount); if (amt <= 0) { toast('ไม่ได้ใส่จำนวนเงิน เลยยังไม่บันทึก', 'warn'); return; }
-        const e = {id:uid(), name:p.name, cat:p.buy, amount:amt, curr:r.curr, rate:r.curr === 'THB' ? 1 : t.rate, day:0, note:'จากลิสต์เตรียมของ', receipts:[]};
+        const e = {id:uid(), name:p.name, cat:p.buy, amount:amt, curr:r.curr, rate:r.curr === 'THB' ? 1 : t.rate, day:0, note:'จากลิสต์เตรียมของ', receipts:[], paidBy:r.paidBy || t.members[0].id, splitAmong:t.members.map(m => m.id)};
         t.expenses.push(e); p.expId = e.id; save(); render(); toast(`บันทึก ${money(expThb(e))} ในงบ${BCATS[p.buy].n}แล้ว`);
       }
     }
@@ -662,7 +703,14 @@ function vBudget(){
       return `<div class="bc"><span class="ic">${c.i}</span><span>${c.n}${c.perDay && num(t.budget.food) ? ` <span class="muted small">(${money(t.budget.food)}/วัน)</span>` : ''}</span>
       <span class="num small right">${money(us)} <span class="muted">/ ${b ? money(b) : '–'}</span></span>
       <div class="bar ${b ? barCls(p) : ''}"><i style="width:${b ? Math.min(100, p) : 0}%"></i></div></div>`; }).join('')}</div>`;
-  h += `<div class="row" style="margin:16px 2px 4px"><h2 class="grow">รายจ่าย (${t.expenses.length})</h2></div>
+  if (t.members.length > 1) { const tx = settle(t);
+    h += `<div class="card"><div class="ch"><h2>🤝 หารเงิน ${t.members.length} คน</h2><button class="btn ghost sm" data-act="go" data-v="split">ดูทั้งหมด</button></div>
+      ${tx.length ? tx.slice(0, 3).map(x => `<div class="row small" style="padding:4px 0">${esc(mName(t, x.from))} → ${esc(mName(t, x.to))}<span class="grow"></span><b class="num">${money(x.amt)}</b></div>`).join('') + (tx.length > 3 ? `<div class="muted small">และอีก ${tx.length - 3} รายการ</div>` : '')
+        : '<div class="muted small">ตอนนี้ไม่มีใครต้องโอนให้ใคร</div>'}</div>`; }
+  h += `<div class="row" style="margin:16px 2px 8px"><h2 class="grow">รายจ่าย (${t.expenses.length})</h2></div>
+    <div class="seg" style="margin-bottom:10px"><button class="${ui.expMode !== 'cal' ? 'on' : ''}" data-act="expMode" data-m="list">📋 รายการ</button><button class="${ui.expMode === 'cal' ? 'on' : ''}" data-act="expMode" data-m="cal">🗓️ ปฏิทิน</button></div>`;
+  if (ui.expMode === 'cal') return h + calendarHtml(t) + `<button class="fab" data-act="addExp" aria-label="บันทึกรายจ่าย">＋</button>`;
+  h += `
     <div class="scrollx"><div class="chips"><button class="chip ${!ui.expCat ? 'on' : ''}" data-act="expCat" data-k="">ทั้งหมด</button>
     ${Object.entries(BCATS).map(([k, c]) => `<button class="chip ${ui.expCat === k ? 'on' : ''}" data-act="expCat" data-k="${k}">${c.i} ${c.n.split(' ')[0]}</button>`).join('')}</div></div>`;
   const list = t.expenses.filter(e => !ui.expCat || e.cat === ui.expCat);
@@ -671,12 +719,95 @@ function vBudget(){
   Object.keys(byDay).sort((a, b) => a - b).forEach(d => {
     const items = byDay[d], sum = items.reduce((s, e) => s + expThb(e), 0), dd = dayDate(t, +d);
     h += `<div class="dayhd"><span>${+d === 0 ? 'ก่อนเดินทาง' : 'วันที่ ' + d + (dd ? ' · ' + thDate(dd) : '')}</span><span class="num">${money(sum)}</span></div>` +
-      items.map(e => `<button class="ex" data-act="editExp" data-id="${e.id}"><span class="ic">${BCATS[e.cat].i}</span>
-        <span class="grow"><span class="nm">${esc(e.name)}</span>${e.note || e.receipts.length ? `<span class="muted small" style="display:block">${esc(e.note)}${e.receipts.length ? ' 📎' + e.receipts.length : ''}</span>` : ''}</span>
-        <span class="right"><b class="num">${money(expThb(e))}</b>${e.curr !== 'THB' ? `<span class="muted small num" style="display:block">${money(e.amount, e.curr)}</span>` : ''}</span></button>`).join('');
+      items.map(e => expRow(t, e)).join('');
   });
   return h + `<button class="fab" data-act="addExp" aria-label="บันทึกรายจ่าย">＋</button>`;
 }
+function expRow(t, e){
+  const who = t.members.length > 1 ? `${mName(t, e.paidBy)} จ่าย${e.splitAmong.length < t.members.length ? ' · หาร ' + e.splitAmong.length + ' คน' : ''}` : '';
+  const sub = [who, e.note].filter(Boolean).join(' · ') + (e.receipts.length ? ' 📎' + e.receipts.length : '');
+  return `<button class="ex" data-act="editExp" data-id="${e.id}"><span class="ic">${BCATS[e.cat].i}</span>
+    <span class="grow"><span class="nm">${esc(e.name)}</span>${sub ? `<span class="muted small" style="display:block">${esc(sub)}</span>` : ''}</span>
+    <span class="right"><b class="num">${money(expThb(e))}</b>${e.curr !== 'THB' ? `<span class="muted small num" style="display:block">${money(e.amount, e.curr)}</span>` : ''}</span></button>`;
+}
+function calendarHtml(t){
+  const byDay = {}; t.expenses.forEach(e => byDay[e.day] = (byDay[e.day] || 0) + expThb(e));
+  const sel = ui.calDay, short = n => n >= 1000 ? (n / 1000).toFixed(n >= 10000 ? 0 : 1) + 'k' : Math.round(n);
+  let h = '';
+  if (!t.startDate) {
+    h += `<div class="alert info" style="margin-bottom:10px">ใส่วันเดินทางในหน้าแก้ไขทริป จะเห็นเป็นปฏิทินจริง <button class="link" data-act="editTrip">ใส่วัน</button></div><div class="cal">`;
+    for (let i = 1; i <= days(t); i++) h += `<button class="cd in ${sel === i ? 'sel' : ''}" data-act="calDay" data-d="${i}"><span>วัน ${i}</span>${byDay[i] ? `<b>${short(byDay[i])}</b>` : ''}</button>`;
+    h += '</div>';
+  } else {
+    const s = new Date(t.startDate + 'T00:00'), en = new Date(endDate(t) + 'T00:00'), today = todayIso();
+    let m = new Date(s.getFullYear(), s.getMonth(), 1);
+    while (m <= en) {
+      h += `<div class="card"><div class="ch"><h2>${m.toLocaleDateString('th-TH', {month:'long', year:'numeric'})}</h2></div><div class="cal">${['อา','จ','อ','พ','พฤ','ศ','ส'].map(x => `<div class="dow">${x}</div>`).join('')}`;
+      for (let i = 0; i < m.getDay(); i++) h += '<div></div>';
+      const last = new Date(m.getFullYear(), m.getMonth() + 1, 0).getDate();
+      for (let k = 1; k <= last; k++) {
+        const dt = new Date(m.getFullYear(), m.getMonth(), k), idx = Math.round((dt - s) / 864e5) + 1, isT = iso(dt) === today;
+        if (dt >= s && dt <= en) h += `<button class="cd in ${sel === idx ? 'sel' : ''} ${isT ? 'today' : ''}" data-act="calDay" data-d="${idx}" aria-label="วันที่ ${idx}"><span>${k}</span>${byDay[idx] ? `<b>${short(byDay[idx])}</b>` : ''}</button>`;
+        else h += `<div class="cd"><span>${k}</span></div>`;
+      }
+      h += '</div></div>'; m = new Date(m.getFullYear(), m.getMonth() + 1, 1);
+    }
+  }
+  const pre = byDay[0] || 0;
+  h += `<button class="ex mt" data-act="calDay" data-d="0" style="${sel === 0 ? 'border-color:var(--acc)' : ''}"><span class="ic">🧳</span><span class="grow nm">ก่อนเดินทาง</span><b class="num">${money(pre)}</b></button>`;
+  const out = t.expenses.filter(e => e.day > days(t)).length;
+  if (out) h += `<div class="alert warn mt">มี ${out} รายการอยู่นอกช่วงวันเดินทาง</div>`;
+  if (sel === null || sel === undefined) return h + `<div class="muted small mt">แตะวันที่เพื่อดูรายการของวันนั้น</div>`;
+  const list = t.expenses.filter(e => e.day === sel), dd = dayDate(t, sel);
+  h += `<div class="dayhd"><span>${sel === 0 ? 'ก่อนเดินทาง' : 'วันที่ ' + sel + (dd ? ' · ' + thDate(dd) : '')}</span><span class="num">${money(list.reduce((a, e) => a + expThb(e), 0))}</span></div>`;
+  return h + (list.length ? list.map(e => expRow(t, e)).join('') : `<div class="empty" style="padding:20px">ไม่มีรายจ่ายวันนี้</div>`);
+}
+
+/* ============ VIEW: SPLIT ============ */
+function vSplit(){
+  const t = cur(); if (!t) return needTrip();
+  let h = passHtml(t) + `<div class="hd"><div><h1>หารเงิน</h1><div class="muted">คำนวณจากรายจ่ายทุกรายการในหน้างบประมาณ</div></div><button class="btn ghost sm" data-act="go" data-v="budget">← งบ</button></div>`;
+  if (t.members.length < 2) return h + `<div class="empty"><div class="e">🤝</div><b>เพิ่มผู้ร่วมทริปก่อน</b><p>ใส่ชื่อเพื่อนในหน้าแก้ไขทริป แล้วตอนบันทึกรายจ่ายเลือกว่าใครจ่ายและหารกับใคร</p><button class="btn pri" data-act="editTrip">+ เพิ่มคน</button></div>`;
+  const b = balances(t), tx = settle(t);
+  h += `<div class="card"><div class="ch"><h2>💸 ใครต้องโอนให้ใคร</h2></div>` +
+    (tx.length ? tx.map(x => `<div class="xfer">${avatar(t, x.from)}<div class="grow"><b>${esc(mName(t, x.from))}</b> <span class="muted">โอนให้</span> <b>${esc(mName(t, x.to))}</b></div><b class="num">${money(x.amt)}</b></div>`).join('')
+      + `<button class="btn ghost sm mt" data-act="copySplit">📋 คัดลอกไปส่งใน LINE</button>`
+      : `<div class="alert good">✅ ทุกคนเคลียร์กันแล้ว ไม่มีใครต้องโอน</div>`) + `</div>`;
+  h += `<div class="card"><div class="ch"><h2>📒 ยอดของแต่ละคน</h2></div><div class="scrollx"><table class="t"><tr><th>ชื่อ</th><th class="r">จ่ายไป</th><th class="r">ส่วนของตัวเอง</th><th class="r">สุทธิ</th></tr>` +
+    t.members.map(m => { const x = b[m.id], n = x.paid - x.share;
+      return `<tr><td><span class="row">${avatar(t, m.id)}${esc(m.name)}</span></td><td class="r num">${money(x.paid)}</td><td class="r num">${money(x.share)}</td><td class="r num ${n >= 0 ? 'tgood' : 'tbad'}">${n >= 0 ? '+' : ''}${money(n)}</td></tr>`; }).join('') +
+    `</table></div><div class="muted small mt-s">+ ได้เงินคืน · − ต้องจ่ายเพิ่ม · ตั๋วที่ซื้อแยกกันให้บันทึกแบบหารกับตัวเองคนเดียว</div></div>`;
+  return h;
+}
+function splitText(t){
+  const tx = settle(t);
+  return `🤝 หารเงิน — ${t.name || 'ทริป'}\n` + (tx.length ? tx.map(x => `• ${mName(t, x.from)} โอนให้ ${mName(t, x.to)} ${money(x.amt)}`).join('\n') : 'ทุกคนเคลียร์กันแล้ว') + `\n(คำนวณด้วย TripBudget)`;
+}
+
+/* ============ VIEW: COMPARE ============ */
+function vCompare(){
+  const hd = `<div class="hd"><div><h1>เปรียบเทียบทริป</h1><div class="muted">แตะชื่อทริปเพื่อเลือก/ไม่เลือก</div></div><button class="btn ghost sm" data-act="go" data-v="trips">← ทริป</button></div>`;
+  if (db.trips.length < 2) return hd + `<div class="empty"><div class="e">⚖️</div><b>ต้องมีอย่างน้อย 2 ทริป</b><p>สร้างทริปทางเลือกไว้เทียบกัน เช่น ญี่ปุ่น กับ เกาหลี</p><button class="btn pri" data-act="newTrip">+ สร้างทริป</button></div>`;
+  for (const id of [...ui.cmp]) if (!db.trips.some(t => t.id === id)) ui.cmp.delete(id);
+  if (!ui.cmp.size) db.trips.slice(0, 2).forEach(t => ui.cmp.add(t.id));
+  let h = hd + `<div class="chips" style="margin-bottom:12px">${db.trips.map(t => `<button class="chip ${ui.cmp.has(t.id) ? 'on' : ''}" data-act="cmpToggle" data-id="${t.id}">${(country(t) || {f:'🌍'}).f} ${esc(t.name || 'ทริปไม่มีชื่อ')}</button>`).join('')}</div>`;
+  const sel = db.trips.filter(t => ui.cmp.has(t.id));
+  if (sel.length < 2) return h + `<div class="empty" style="padding:20px">เลือกอย่างน้อย 2 ทริป</div>`;
+  const cols = sel.map((t, i) => { const used = usedTotal(t), bt = budgetTotal(t), base = used || bt; return {t, col:COLORS[i % COLORS.length], used, bt, base, d:days(t), p:pax(t)}; });
+  const bars = (title, f, note) => { const max = Math.max(...cols.map(f), 1);
+    return `<div class="card"><div class="ch"><h2>${title}</h2></div>${cols.map(x => `<div class="brow"><span class="lb">${esc(x.t.name || 'ทริป')}</span><div class="bar"><i style="width:${f(x) / max * 100}%;background:${x.col}"></i></div><b class="v num">${money(f(x))}</b></div>`).join('')}${note ? `<div class="muted small">${note}</div>` : ''}</div>`; };
+  h += bars('💰 งบรวมที่ตั้งไว้', x => x.bt) + bars('🧾 ใช้จ่ายจริง', x => x.used) +
+    bars('👤 ต่อคนต่อวัน', x => x.base / x.d / x.p, 'คิดจากรายจ่ายจริง ถ้ายังไม่มีใช้งบที่ตั้งไว้แทน');
+  const top = t => { const c = Object.keys(BCATS).map(k => [k, usedOf(t, k)]).sort((a, b) => b[1] - a[1])[0]; return c && c[1] ? BCATS[c[0]].i + ' ' + BCATS[c[0]].n.split(' (')[0] : '-'; };
+  const rows = [['ประเทศ', x => (country(x.t) || {n:'-'}).n.split(' (')[0]], ['จำนวนวัน', x => x.d + ' วัน'], ['จำนวนคน', x => x.p + ' คน'],
+    ...Object.entries(BCATS).map(([k, c]) => [c.i + ' ' + c.n.split(' (')[0], x => `${money(usedOf(x.t, k))}<span class="muted"> / ${money(budgetOf(x.t, k))}</span>`]),
+    ['<b>รวม ใช้/งบ</b>', x => `<b>${money(x.used)}</b><span class="muted"> / ${money(x.bt)}</span>`], ['ต่อคน', x => money(x.base / x.p)],
+    ['เตรียมของ', x => `${x.t.packing.filter(p => p.checked).length}/${x.t.packing.length}`], ['จ่ายมากสุด', x => top(x.t)]];
+  h += `<div class="card"><div class="scrollx"><table class="t"><tr><th></th>${cols.map(x => `<th class="r" style="color:${x.col}">${esc(x.t.name || 'ทริป')}</th>`).join('')}</tr>` +
+    rows.map(([l, f]) => `<tr><td class="muted">${l}</td>${cols.map(x => `<td class="r num">${f(x)}</td>`).join('')}</tr>`).join('') + `</table></div></div>`;
+  return h;
+}
+
 function budgetSheet(t){
   S = {kind:'budget'};
   openSheet(`<div class="sh"><b>ตั้งงบตามหมวด (บาท)</b><button class="x" data-act="closeSheet" aria-label="ปิด">✕</button></div>
@@ -687,7 +818,8 @@ function budgetSheet(t){
 }
 function expSheet(t, e){
   const ab = isAbroad(t) && t.currency !== 'THB', cd = currentDay(t);
-  const x = e ? {...e} : {name:'', amount:'', curr:ab && cd ? t.currency : (ab ? t.currency : 'THB'), rate:t.rate, cat:'food', day:cd || 0, note:'', receipts:[]};
+  const x = e ? {...e} : {name:'', amount:'', curr:ab ? t.currency : 'THB', rate:t.rate, cat:'food', day:cd || 0, note:'', receipts:[], paidBy:t.members[0].id, splitAmong:t.members.map(m => m.id)};
+  const multi = t.members.length > 1;
   S = {kind:'exp', id:e ? e.id : null, curr:x.curr, cat:x.cat, receipts:[...x.receipts], added:[], removed:[]};
   let dayOpts = `<option value="0" ${x.day === 0 ? 'selected' : ''}>ก่อนเดินทาง</option>`;
   for (let i = 1; i <= Math.max(days(t), x.day); i++) { const dd = dayDate(t, i); dayOpts += `<option value="${i}" ${i === x.day ? 'selected' : ''}>วันที่ ${i}${dd ? ' · ' + thDate(dd) : ''}</option>`; }
@@ -700,6 +832,9 @@ function expSheet(t, e){
     <div><div class="muted small" style="margin-bottom:6px">หมวด</div><div class="chips" id="eCats">${Object.entries(BCATS).map(([k, c]) => `<button class="chip ${k === x.cat ? 'on' : ''}" data-act="eCat" data-k="${k}">${c.i} ${c.n.split(' ')[0]}</button>`).join('')}</div></div>
     <label class="f">รายการ<input id="eName" value="${esc(e ? x.name : '')}" placeholder="เว้นว่าง = ใช้ชื่อหมวด" maxlength="80"></label>
     <label class="f">วัน<select id="eDay">${dayOpts}</select></label>
+    ${multi ? `<label class="f">ใครจ่าย<select id="ePaid">${t.members.map(m => `<option value="${m.id}" ${m.id === x.paidBy ? 'selected' : ''}>${esc(m.name)}</option>`).join('')}</select></label>
+    <div><div class="row muted small" style="margin-bottom:6px"><span class="grow">หารกับใคร</span><button class="link" data-act="eAll">เลือกทุกคน</button></div>
+    <div class="chips" id="eSplit">${t.members.map(m => `<label class="chip ck"><input type="checkbox" value="${m.id}" ${x.splitAmong.includes(m.id) ? 'checked' : ''}>${esc(m.name)}</label>`).join('')}</div></div>` : ''}
     <label class="f">หมายเหตุ<input id="eNote" value="${esc(x.note)}" placeholder="ไม่บังคับ" maxlength="120"></label>
     <div><div class="muted small" style="margin-bottom:6px">ใบเสร็จ</div><div class="thumbs" id="eThumbs"></div>
     <label class="upload mt-s">📷 แนบรูปใบเสร็จ<input type="file" id="eFile" accept="image/*" multiple hidden></label></div></div>
@@ -809,11 +944,11 @@ async function importData(file){
 }
 
 /* ============ RENDER ============ */
-const VIEWS = {trips:vTrips, form:vForm, packing:vPacking, budget:vBudget, tips:vTips, templates:vTemplates};
+const VIEWS = {trips:vTrips, form:vForm, packing:vPacking, budget:vBudget, tips:vTips, templates:vTemplates, split:vSplit, compare:vCompare};
 function render(){
   const v = VIEWS[ui.view] ? ui.view : 'trips';
   $('#view').innerHTML = VIEWS[v]();
-  const navKey = v === 'form' || v === 'templates' ? (v === 'templates' ? 'packing' : 'trips') : v;
+  const navKey = {form:'trips', compare:'trips', templates:'packing', split:'budget'}[v] || v;
   $$('.nav button').forEach(b => b.classList.toggle('on', b.dataset.v === navKey));
   const t = cur(); $('#topTrip').textContent = t && v !== 'trips' ? ((country(t) || {f:'🌍'}).f + ' ' + (t.name || 'ทริปไม่มีชื่อ')) : '';
   $('[data-act="editTrip"]', $('#menu')).hidden = !t;
@@ -833,6 +968,15 @@ const A = {
   cancelForm(){ ui.form = null; go(cur() ? 'packing' : 'trips'); },
   fType(el){ ui.form.type = el.dataset.k; render(); if (ui.form.type === 'abroad' && ui.form.country === 'TH') { const s = $('#fCountry'); if (s) s.focus(); } },
   fFetch(){ formFetchRate(true); },
+  fAddM(){ ui.form.members.push({id:uid(), name:'เพื่อน ' + ui.form.members.length}); render(); const ins = $$('[data-fm]'); const l = ins[ins.length - 1]; if (l) { l.focus(); l.select(); } },
+  fDelM(el){ const f = ui.form; if (f.members.length < 2) return; f.members.splice(+el.dataset.i, 1); render(); },
+  expMode(el){ ui.expMode = el.dataset.m; render(); },
+  calDay(el){ ui.calDay = +el.dataset.d; render(); },
+  eAll(){ $$('#eSplit input').forEach(i => i.checked = true); },
+  async copySplit(){ const text = splitText(cur());
+    try { await navigator.clipboard.writeText(text); toast('คัดลอกแล้ว วางใน LINE ได้เลย'); }
+    catch { const ta = document.createElement('textarea'); ta.value = text; document.body.appendChild(ta); ta.select(); try { document.execCommand('copy'); toast('คัดลอกแล้ว'); } catch { toast('คัดลอกไม่ได้', 'bad'); } ta.remove(); } },
+  cmpToggle(el){ const id = el.dataset.id; ui.cmp.has(id) ? ui.cmp.delete(id) : ui.cmp.add(id); render(); },
   async saveForm(){
     const f = ui.form; if (!f) return;
     if (f.type === 'abroad' && f.country === 'TH') { toast('เลือกประเทศปลายทางก่อน', 'bad'); return; }
@@ -843,7 +987,7 @@ const A = {
     if (!f.id) { const t = newTrip(f); db.trips.push(t); db.currentId = t.id; ui.form = null; save(); go('packing'); toast(`สร้างทริปแล้ว มีของ ${t.packing.length} รายการให้เตรียม`); return; }
     const t = db.trips.find(x => x.id === f.id); if (!t) return;
     const wasAbroad = isAbroad(t), oldType = t.type;
-    Object.assign(t, {name:f.name, type:f.type, country:f.country, currency:ab ? f.currency : 'THB', rate:ab ? num(f.rate) : 1, rateAt:f.rateAt, startDate:f.startDate, days:Math.max(1, parseInt(f.days) || 1)});
+    Object.assign(t, {members:f.members.map(m => ({id:m.id, name:m.name.trim() || '?'})), name:f.name, type:f.type, country:f.country, currency:ab ? f.currency : 'THB', rate:ab ? num(f.rate) : 1, rateAt:f.rateAt, startDate:f.startDate, days:Math.max(1, parseInt(f.days) || 1)});
     normalizeTrip(t); ui.form = null; save(); go('packing'); toast('บันทึกแล้ว');
     const miss = missingFromTpl(t);
     if (miss.length && ((!wasAbroad && isAbroad(t)) || oldType !== t.type)) {
@@ -857,7 +1001,7 @@ const A = {
     t.expenses.forEach(e => e.receipts.forEach(r => IDB.del(r)));
     db.trips = db.trips.filter(x => x !== t); if (db.currentId === t.id) db.currentId = null; ui.form = null; save(); go('trips'); toast('ลบทริปแล้ว', 'warn');
   },
-  openTrip(el){ db.currentId = el.dataset.id; save(); go('packing'); },
+  openTrip(el){ if (db.currentId !== el.dataset.id) { ui.calDay = null; ui.expCat = ''; } db.currentId = el.dataset.id; save(); go('packing'); },
   packFilter(el){ ui.packFilter = el.dataset.k; render(); },
   toggleItem(el){ const t = cur(), p = t && t.packing.find(x => x.id === el.dataset.id); if (p) toggleItem(t, p); },
   editItem(el){ const t = cur(), p = t.packing.find(x => x.id === el.dataset.id); if (p) itemSheet(t, p); },
@@ -894,7 +1038,10 @@ const A = {
   saveExp(){
     const t = cur(), amount = num($('#eAmt').value); if (amount <= 0) { toast('ใส่จำนวนเงินก่อน', 'bad'); $('#eAmt').focus(); return; }
     const rate = S.curr === 'THB' ? 1 : num($('#eRate') ? $('#eRate').value : t.rate); if (rate <= 0) { toast('ใส่เรทก่อน', 'bad'); return; }
-    const v = {name:$('#eName').value.trim() || BCATS[S.cat].n.split(' (')[0], amount, curr:S.curr, rate, cat:S.cat, day:parseInt($('#eDay').value) || 0, note:$('#eNote').value.trim(), receipts:S.receipts};
+    const split = $('#eSplit') ? $$('#eSplit input:checked').map(i => i.value) : t.members.map(m => m.id);
+    if (!split.length) { toast('เลือกคนที่หารอย่างน้อย 1 คน', 'bad'); return; }
+    const v = {name:$('#eName').value.trim() || BCATS[S.cat].n.split(' (')[0], amount, curr:S.curr, rate, cat:S.cat, day:parseInt($('#eDay').value) || 0, note:$('#eNote').value.trim(), receipts:S.receipts,
+      paidBy:$('#ePaid') ? $('#ePaid').value : t.members[0].id, splitAmong:split};
     if (S.id) Object.assign(t.expenses.find(x => x.id === S.id), v); else t.expenses.push({id:uid(), ...v});
     S.removed.forEach(id => IDB.del(id)); S.added = []; const wasEdit = !!S.id;
     save(); closeSheet(); render(); toast(wasEdit ? 'แก้ไขแล้ว' : `บันทึก ${money(amount * rate)} แล้ว`);
@@ -937,6 +1084,7 @@ document.addEventListener('click', e => {
 });
 document.addEventListener('input', e => {
   const el = e.target;
+  if (el.dataset.fm !== undefined && ui.form) { const m = ui.form.members[+el.dataset.fm]; if (m) m.name = el.value; return; }
   if (el.dataset.ff && ui.form) {
     const f = ui.form, k = el.dataset.ff; f[k] = el.value;
     if (k === 'days') f.days = el.value;
