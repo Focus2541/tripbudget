@@ -1,6 +1,6 @@
 // TripBudget service worker — ทำให้แอปเปิดได้แม้ไม่มีเน็ต
 // แก้ index.html แล้วให้เปลี่ยนเลขเวอร์ชันนี้ ผู้ใช้จะได้เวอร์ชันใหม่ตอนเปิดแอปครั้งถัดไป
-const CACHE = 'tripbudget-v4.1.0';
+const CACHE = 'tripbudget-v4.1.1';
 const CORE = ['./', './index.html', './manifest.json', './icon.svg', './icon-192.png', './icon-512.png'];
 
 self.addEventListener('install', e => {
@@ -17,7 +17,7 @@ self.addEventListener('fetch', e => {
   const url = new URL(req.url);
   if (/er-api\.com|exchangerate-api\.com/.test(url.hostname)) return; // เรทเงิน: แอปมีเรทสำรองในเครื่องเอง
   if (req.mode === 'navigate') {
-    e.respondWith(fetch(req).then(r => { const c = r.clone(); caches.open(CACHE).then(x => x.put('./index.html', c)); return r; })
+    e.respondWith(fetch(req, {cache:'no-cache'}).then(r => { const c = r.clone(); caches.open(CACHE).then(x => x.put('./index.html', c)); return r; })
       .catch(() => caches.match('./index.html')));
     return;
   }

@@ -200,7 +200,7 @@ table.t td{padding:9px 6px;border-bottom:1px solid var(--line)}table.t td.num{wh
     <button data-act="exportData">💾 สำรองข้อมูล (.json)</button>
     <button data-act="importData">📂 กู้คืนข้อมูล</button>
     <button data-act="install" id="installBtn" hidden>📲 ติดตั้งเป็นแอป</button>
-    <div class="ft">ข้อมูลเก็บในเครื่องนี้เท่านั้น · v4.1</div>
+    <div class="ft">ข้อมูลเก็บในเครื่องนี้เท่านั้น · v4.1.1</div>
   </div>
   <input type="file" id="importFile" accept=".json,application/json" hidden>
 </header>
@@ -1145,7 +1145,12 @@ document.addEventListener('visibilitychange', () => { if (document.visibilitySta
   if (migrated) setTimeout(() => dialog({title:`ย้ายข้อมูลเดิม ${migrated} ทริปแล้ว`, text:'รายจ่าย ตั๋ว และที่พักเดิมอยู่ในหน้างบประมาณ งบรวมเดิมใส่ไว้ในหมวด "อื่นๆ" ปรับแยกหมวดได้ที่ปุ่ม "ตั้งงบ"\nแนะนำกดสำรองข้อมูลเก็บไว้หนึ่งครั้ง', ok:'เข้าใจแล้ว', cancel:''}), 300);
   if (!ratesFresh()) fetchRates();
   if (navigator.storage && navigator.storage.persist) navigator.storage.persist().catch(() => {});
-  if ('serviceWorker' in navigator && /^https?:$/.test(location.protocol)) navigator.serviceWorker.register('sw.js').catch(() => {});
+  if ('serviceWorker' in navigator && /^https?:$/.test(location.protocol)) {
+    const hadSW = !!navigator.serviceWorker.controller; let reloaded = false;
+    navigator.serviceWorker.addEventListener('controllerchange', () => { if (hadSW && !reloaded) { reloaded = true; save(); location.reload(); } });
+    navigator.serviceWorker.register('sw.js', {updateViaCache:'none'}).then(r => { r.update().catch(() => {});
+      document.addEventListener('visibilitychange', () => { if (document.visibilityState === 'visible') r.update().catch(() => {}); }); }).catch(() => {});
+  }
 })();
 </script>
 </body>
