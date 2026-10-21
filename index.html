@@ -130,7 +130,7 @@ main{max-width:720px;margin:0 auto;padding:16px}
 /* tips */
 .tip{display:flex;gap:12px;padding:12px 0;border-bottom:1px solid var(--line);cursor:pointer;width:100%;text-align:left}.tip:last-child{border-bottom:none}
 .tip .ck{width:24px;height:24px;border-radius:50%;border:2px solid var(--line2);flex-shrink:0;display:grid;place-items:center;font-size:13px;color:transparent;margin-top:1px}
-.tip.done .ck{background:var(--good);border-color:var(--good);color:#fff}
+.tip.done .ck{background:var(--good);border-color:var(--good);color:#fff}.tip.seq:not(.done) .ck{color:var(--acc-ink);border-color:var(--acc);font-family:var(--f-num);font-weight:600}
 .tip.done .tt{color:var(--ink3)}
 .tip .tt{font-weight:600}.tip .td{font-size:13.5px;color:var(--ink2);margin-top:2px}
 .fact{display:grid;grid-template-columns:28px 1fr;gap:2px 10px;padding:9px 0;border-bottom:1px solid var(--line)}.fact:last-child{border-bottom:none}.fact .ic{font-size:19px;grid-row:span 2}
@@ -200,7 +200,7 @@ table.t td{padding:9px 6px;border-bottom:1px solid var(--line)}table.t td.num{wh
     <button data-act="exportData">💾 สำรองข้อมูล (.json)</button>
     <button data-act="importData">📂 กู้คืนข้อมูล</button>
     <button data-act="install" id="installBtn" hidden>📲 ติดตั้งเป็นแอป</button>
-    <div class="ft">ข้อมูลเก็บในเครื่องนี้เท่านั้น · v4.1.1</div>
+    <div class="ft">ข้อมูลเก็บในเครื่องนี้เท่านั้น · v4.2</div>
   </div>
   <input type="file" id="importFile" accept=".json,application/json" hidden>
 </header>
@@ -322,7 +322,7 @@ function download(name, text, type){
 /* ============ STATE ============ */
 let db = {trips:[], currentId:null, templates:null};
 let rates = {rates:{}, at:null};
-const ui = {view:'trips', packFilter:'todo', tplGroup:'common', expCat:'', form:null, expMode:'list', calDay:null, cmp:new Set()};
+const ui = {tipTab:'check', view:'trips', packFilter:'todo', tplGroup:'common', expCat:'', form:null, expMode:'list', calDay:null, cmp:new Set()};
 let deferredPrompt = null, S = null, dlgFetched = 0; // S = open sheet state
 
 function save(){ try { localStorage.setItem(KEY, JSON.stringify(db)); } catch { toast('บันทึกไม่สำเร็จ พื้นที่ในเครื่องเต็ม','bad'); } }
@@ -870,12 +870,29 @@ function tipItems(t){
     {g:'prep', id:'maps', t:'โหลดแผนที่ออฟไลน์และแอปแปลภาษา', d:'โหลดแผนที่เมืองที่จะไปและภาษาของประเทศปลายทางไว้ ใช้ได้ตอนไม่มีเน็ต'},
     {g:'prep', id:'meds', t:'พกยาประจำตัวในบรรจุภัณฑ์เดิม', d:'เก็บยาไว้ในแผงหรือกล่องที่มีฉลาก ถ้าเป็นยาควบคุมควรมีใบรับรองแพทย์ บางประเทศห้ามนำยาบางชนิดเข้า'},
     {g:'prep', id:'weather', t:'เช็กอากาศช่วงที่ไป', d:'ฤดูกาลอาจต่างจากไทยมาก ถ้าไปหน้าหนาวต้องมีเสื้อกันหนาวและครีมทาผิว'},
-    {g:'airport', id:'early', t:'ไปถึงสนามบินก่อนเวลาบิน 3 ชั่วโมง', d:'เผื่อเวลาเช็กอิน โหลดกระเป๋า ตรวจค้น และผ่าน ตม. ประตูขึ้นเครื่องมักปิดก่อนเวลาบิน 20–30 นาที'},
-    {g:'airport', id:'checkin', t:'เช็กอินออนไลน์ล่วงหน้า', d:'ส่วนใหญ่เปิดให้เช็กอิน 24–48 ชั่วโมงก่อนบิน เลือกที่นั่งได้และไม่ต้องต่อคิวนาน'},
-    {g:'airport', id:'liquid', t:'ของเหลวในกระเป๋าถือไม่เกิน 100 มล. ต่อชิ้น', d:'ใส่รวมในถุงใสแบบซิปขนาดไม่เกิน 1 ลิตร ขวดใหญ่กว่านี้ให้ใส่กระเป๋าโหลด'},
-    {g:'airport', id:'power', t:'พาวเวอร์แบงก์ห้ามใส่กระเป๋าโหลด', d:'ต้องถือขึ้นเครื่อง และเช็กความจุที่สายการบินอนุญาต'},
-    {g:'airport', id:'weight', t:'เช็กน้ำหนักกระเป๋าที่ซื้อไว้', d:'สายการบินราคาประหยัดคิดค่าน้ำหนักเกินแพง ซื้อน้ำหนักเพิ่มล่วงหน้าถูกกว่าจ่ายที่เคาน์เตอร์'},
-    {g:'airport', id:'stranger', t:'ไม่รับฝากของจากคนอื่น', d:'ดูแลกระเป๋าของตัวเองตลอด และล็อกกระเป๋าโหลด'},
+    {g:'ap_before', id:'checkin', t:'เช็กอินออนไลน์ 24–48 ชม. ก่อนบิน', d:'ทำในแอปหรือเว็บสายการบิน เลือกที่นั่ง แล้วเก็บบอร์ดดิ้งพาสไว้ในมือถือ ถึงสนามบินไปช่องโหลดกระเป๋า (Bag Drop) ได้เลย'},
+    {g:'ap_before', id:'weight', t:'เช็กน้ำหนักกระเป๋าที่รวมในตั๋ว', d:'สายการบินราคาประหยัดมักให้แค่กระเป๋าถือขึ้นเครื่องประมาณ 7 กก. กระเป๋าโหลดต้องซื้อเพิ่ม ซื้อล่วงหน้าถูกกว่าจ่ายที่เคาน์เตอร์ ชั่งกระเป๋าที่บ้านก่อน'},
+    {g:'ap_before', id:'ap_flight', t:'จดเลขเที่ยวบิน เวลาบิน และอาคารผู้โดยสาร', d:'สนามบินใหญ่มีหลายอาคาร ดูในตั๋วว่าออกจากอาคารไหน และเผื่อเวลาเดินทางไปสนามบินช่วงรถติด'},
+    {g:'ap_before', id:'ap_photo', t:'ถ่ายรูปกระเป๋าโหลดและติดป้ายชื่อ', d:'ถ้ากระเป๋าหายหรือมาไม่ถึง ใช้รูปแจ้งสายการบินได้ง่าย ผูกริบบิ้นสีสดไว้ จะจำกระเป๋าตัวเองบนสายพานได้'},
+    {g:'ap_bag', id:'liquid', t:'ของเหลวในกระเป๋าถือ ชิ้นละไม่เกิน 100 มล.', d:'รวมเจล ครีม และสเปรย์ ใส่ถุงใสแบบซิปขนาดไม่เกิน 1 ลิตร คนละ 1 ถุง ขวดที่ใหญ่กว่า 100 มล. แม้เหลือน้ำนิดเดียวก็โดนยึด ขวดใหญ่ให้ใส่กระเป๋าโหลด'},
+    {g:'ap_bag', id:'power', t:'พาวเวอร์แบงก์ถือขึ้นเครื่องเท่านั้น', d:'ห้ามใส่กระเป๋าโหลด ขนาดไม่เกิน 100Wh นำขึ้นได้ 100–160Wh ต้องขออนุญาตสายการบินก่อน หลายสายการบินห้ามใช้หรือชาร์จพาวเวอร์แบงก์บนเครื่องแล้ว ควรเช็กกฎของสายการบินที่บิน'},
+    {g:'ap_bag', id:'ap_sharp', t:'ของมีคมใส่กระเป๋าโหลด', d:'มีด กรรไกร และที่ตัดเล็บที่มีมีดพับ ห้ามถือขึ้นเครื่อง ส่วนไฟแช็กพกติดตัวได้ 1 อัน แต่ห้ามใส่กระเป๋าโหลด'},
+    {g:'ap_bag', id:'ap_valuable', t:'ของมีค่าและยาถือติดตัว', d:'เงิน เอกสาร โน้ตบุ๊ก และยาประจำตัว ไม่ควรใส่กระเป๋าโหลด เผื่อกระเป๋าหายหรือมาช้า'},
+    t.country === 'US'
+      ? {g:'ap_bag', id:'ap_lock', t:'ใช้กุญแจ TSA กับกระเป๋าโหลด', d:'ไปสหรัฐฯ เจ้าหน้าที่อาจต้องเปิดกระเป๋าตรวจ ถ้าไม่ใช่กุญแจ TSA อาจถูกตัดทิ้ง ของแท้มีโลโก้รูปข้าวหลามตัดสีแดง และมีรหัสกุญแจ เช่น TSA007'}
+      : {g:'ap_bag', id:'ap_lock', t:'ล็อกกระเป๋าโหลด', d:'ใช้กุญแจธรรมดาได้ กุญแจ TSA (โลโก้ข้าวหลามตัดสีแดง มีรหัสกุญแจ) จำเป็นเฉพาะไฟลต์ไปหรือต่อเครื่องที่สหรัฐฯ'},
+    {g:'ap_bag', id:'stranger', t:'ไม่รับฝากของจากคนอื่น', d:'ดูแลกระเป๋าของตัวเองตลอด ถ้ามีคนขอฝากของขึ้นเครื่อง ให้ปฏิเสธ'},
+    {g:'ap_dep', id:'early', t:'ไปถึงสนามบินก่อนเวลาบิน 3 ชั่วโมง', d:'ไฟลต์ต่างประเทศต้องเผื่อเวลาเช็กอิน ตรวจค้น และผ่าน ตม. ช่วงเทศกาลควรเผื่อมากกว่านี้'},
+    {g:'ap_dep', id:'ap_board', t:'ดูจอ Departures หาเคาน์เตอร์เช็กอิน', d:'หาเลขเที่ยวบินบนจอ แล้วดูแถวเคาน์เตอร์ (Row / Counter) ของสายการบิน'},
+    {g:'ap_dep', id:'ap_drop', t:'เช็กอินและโหลดกระเป๋า', d:'ยื่นพาสปอร์ต รับบอร์ดดิ้งพาส และเก็บแท็กกระเป๋าที่ได้ไว้ให้ดี ถ้าเช็กอินออนไลน์แล้ว ไปที่ช่อง Bag Drop'},
+    {g:'ap_dep', id:'ap_sec', t:'ตรวจค้นความปลอดภัย (Security)', d:'เอาโน้ตบุ๊ก แท็บเล็ต ถุงของเหลว มือถือ เหรียญ เข็มขัด นาฬิกา และแจ็กเก็ต ใส่ถาดแยก บางสนามบินตรวจค้นก่อนผ่าน ตม. บางที่หลัง ให้เดินตามป้าย'},
+    {g:'ap_dep', id:'ap_imm', t:'ผ่านตรวจหนังสือเดินทางขาออก (ตม.)', d:'ยื่นพาสปอร์ตและบอร์ดดิ้งพาส คนไทยที่ใช้ e-Passport ส่วนใหญ่ผ่านช่องอัตโนมัติได้'},
+    {g:'ap_dep', id:'ap_gate', t:'ไปที่ประตูขึ้นเครื่อง (Gate)', d:'ดูเลข Gate บนบอร์ดดิ้งพาสหรือจอ บางสนามบินต้องเดินไกลหรือนั่งรถไฟฟ้า ไปถึงหน้า Gate ก่อนเวลา Boarding ประตูมักปิดก่อนเวลาบิน 20–30 นาที'},
+    {g:'ap_dep', id:'ap_onboard', t:'บนเครื่อง', d:'ใส่เสื้อแขนยาวเพราะบนเครื่องหนาว ดื่มน้ำบ่อยๆ ถ้าประเทศปลายทางใช้ใบเข้าเมืองแบบกระดาษ ลูกเรือจะแจกให้กรอก'},
+    {g:'ap_arr', id:'ap_a1', t:'เดินตามป้าย Arrival / Immigration', d:'เข้าแถวช่อง Foreigners หรือ Visitors ยื่นพาสปอร์ต (และ QR ใบเข้าเมืองถ้ากรอกออนไลน์) เตรียมตอบว่ามาทำอะไร พักที่ไหน และกลับวันไหน'},
+    {g:'ap_arr', id:'ap_a2', t:'รับกระเป๋าที่ Baggage Claim', d:'ดูเลขสายพานจากจอตามเที่ยวบิน ถ้ากระเป๋าไม่มา แจ้งเคาน์เตอร์ Lost & Found ก่อนออกจากโซนรับกระเป๋า พร้อมแท็กกระเป๋าและรูปถ่าย'},
+    {g:'ap_arr', id:'ap_a3', t:'ผ่านศุลกากร (Customs)', d:'ถ้าไม่มีของต้องสำแดงให้เดินช่องเขียว อาหารสด เนื้อสัตว์ และผลไม้ หลายประเทศห้ามนำเข้า บางประเทศปรับหนัก'},
+    {g:'ap_arr', id:'ap_a4', t:'ออกไปเมือง', d:'เปิดใช้ eSIM แลกหรือถอนเงินเล็กน้อย แล้วไปขึ้นรถไฟ แท็กซี่ หรือรถที่จองไว้ ใช้แท็กซี่จากจุดหรือเคาน์เตอร์ทางการ อย่าตามคนที่เดินมาชวนขึ้นรถ'},
     {g:'sos', id:'em', t:`เบอร์ฉุกเฉินใน${cn}`, d:c.e ? `ตำรวจ ${c.e[0]} · รถพยาบาล ${c.e[1]} (ข้อมูลทั่วไป ควรเช็กอีกครั้งก่อนเดินทาง)` : 'ค้นหาเบอร์ตำรวจและรถพยาบาลของประเทศปลายทาง', em:c.e},
     {g:'sos', id:'embassy', t:'บันทึกที่อยู่และเบอร์สถานทูตไทย', d:'ค้นหาสถานเอกอัครราชทูตหรือสถานกงสุลใหญ่ไทยในเมืองที่ไป แล้วบันทึกที่อยู่และเบอร์โทรไว้'},
     {g:'sos', id:'lost', t:'รู้ขั้นตอนถ้าพาสปอร์ตหาย', d:'แจ้งความกับตำรวจท้องถิ่นเพื่อขอใบแจ้งความ แล้วนำไปติดต่อสถานทูตหรือสถานกงสุลไทยเพื่อขอเอกสารเดินทางกลับ'},
@@ -883,22 +900,27 @@ function tipItems(t){
     {g:'sos', id:'share', t:'ส่งแผนเดินทางให้ครอบครัว', d:'ส่งเที่ยวบิน ที่พัก และช่องทางติดต่อให้คนที่บ้านไว้'}
   ];
 }
-const TIP_GROUPS = {doc:{n:'เอกสาร/วีซ่า',i:'📄'}, money:{n:'เงิน/ธนาคาร',i:'💳'}, prep:{n:'ของต้องเตรียม',i:'🎒'}, airport:{n:'สนามบิน',i:'🛫'}, sos:{n:'ฉุกเฉิน',i:'🆘'}};
+const TIP_GROUPS = {doc:{n:'เอกสาร/วีซ่า',i:'📄'}, money:{n:'เงิน/ธนาคาร',i:'💳'}, prep:{n:'ของต้องเตรียม',i:'🎒'}, sos:{n:'ฉุกเฉิน',i:'🆘'},
+  ap_before:{n:'ก่อนวันเดินทาง',i:'📅',ap:true}, ap_bag:{n:'กฎจัดกระเป๋า',i:'🧳',ap:true}, ap_dep:{n:'วันเดินทาง: ทำตามลำดับ',i:'🛫',ap:true,seq:true}, ap_arr:{n:'ถึงปลายทาง: ทำตามลำดับ',i:'🛬',ap:true,seq:true}};
 function vTips(){
   const t = cur(); if (!t) return needTrip();
   if (!isAbroad(t)) return passHtml(t) + `<div class="empty"><div class="e">💡</div><b>เคล็ดลับนี้สำหรับทริปต่างประเทศ</b>
     <p>ถ้าทริปนี้ไปต่างประเทศ ให้เลือกประเทศปลายทางในหน้าแก้ไขทริป เคล็ดลับจะขึ้นอัตโนมัติ</p><button class="btn ghost" data-act="editTrip">แก้ไขทริป</button></div>`;
-  const c = country(t) || {}, pi = plugInfo(c), items = tipItems(t), done = items.filter(x => t.tipsDone[x.id]).length;
-  let h = passHtml(t) + `<div class="card"><div class="ch"><h2>ข้อมูลประเทศปลายทาง</h2></div>
+  const c = country(t) || {}, pi = plugInfo(c), apTab = ui.tipTab === 'airport';
+  const items = tipItems(t).filter(x => !!(TIP_GROUPS[x.g] || {}).ap === apTab), done = items.filter(x => t.tipsDone[x.id]).length;
+  let h = passHtml(t) + `<div class="seg" style="margin-bottom:12px"><button class="${!apTab ? 'on' : ''}" data-act="tipTab" data-k="check">📋 เช็กลิสต์</button><button class="${apTab ? 'on' : ''}" data-act="tipTab" data-k="airport">✈️ สนามบินครั้งแรก</button></div>`;
+  if (apTab) h += `<div class="card flat"><div class="row"><b class="grow">ขั้นตอนสนามบินครั้งแรก</b><b class="num">${done}/${items.length}</b></div><div class="bar mt-s"><i style="width:${pct(done, items.length)}%"></i></div>
+    <div class="muted small mt-s">ติ๊กไปทีละขั้นได้ทั้งตอนเตรียมตัวและตอนอยู่ในสนามบิน</div></div>`;
+  else h += `<div class="card"><div class="ch"><h2>ข้อมูลประเทศปลายทาง</h2></div>
     <div class="fact"><span class="ic">💱</span><b>${esc(t.currency || '-')} ${CURR[t.currency] ? '· ' + CURR[t.currency].n : ''}</b><span class="muted small">1 ${t.currency} = ${fmtRate(t.rate)} บาท · 1,000 บาท ≈ ${money(1000 / (t.rate || 1), t.currency)}</span></div>
     ${pi ? `<div class="fact"><span class="ic">🔌</span><b>${pi.types}</b><span class="muted small">${pi.need}${pi.volt}</span></div>` : ''}
     ${c.e ? `<div class="fact"><span class="ic">🆘</span><b>เบอร์ฉุกเฉิน</b><div class="em"><a href="tel:${c.e[0]}">👮 ${c.e[0]}</a>${c.e[1] !== c.e[0] ? `<a href="tel:${c.e[1]}">🚑 ${c.e[1]}</a>` : `<span class="muted small" style="align-self:center">ตำรวจและรถพยาบาลเบอร์เดียวกัน</span>`}</div></div>` : ''}
   </div><div class="card flat"><div class="row"><b class="grow">เช็กลิสต์ไปต่างประเทศครั้งแรก</b><b class="num">${done}/${items.length}</b></div><div class="bar mt-s"><i style="width:${pct(done, items.length)}%"></i></div></div>`;
   for (const [g, G] of Object.entries(TIP_GROUPS)) {
-    const list = items.filter(x => x.g === g), d = list.filter(x => t.tipsDone[x.id]).length;
+    const list = items.filter(x => x.g === g), d = list.filter(x => t.tipsDone[x.id]).length; if (!list.length) continue;
     h += `<div class="card"><div class="ch"><h2>${G.i} ${G.n}</h2><span class="muted small num">${d}/${list.length}</span></div>
-      ${list.map(x => `<button class="tip ${t.tipsDone[x.id] ? 'done' : ''}" data-act="toggleTip" data-id="${x.id}" aria-pressed="${!!t.tipsDone[x.id]}">
-        <span class="ck">✓</span><span class="grow"><span class="tt" style="display:block">${esc(x.t)}</span><span class="td" style="display:block">${esc(x.d)}</span></span></button>`).join('')}</div>`;
+      ${list.map((x, i) => `<button class="tip ${t.tipsDone[x.id] ? 'done' : ''} ${G.seq ? 'seq' : ''}" data-act="toggleTip" data-id="${x.id}" aria-pressed="${!!t.tipsDone[x.id]}">
+        <span class="ck">${G.seq && !t.tipsDone[x.id] ? i + 1 : '✓'}</span><span class="grow"><span class="tt" style="display:block">${esc(x.t)}</span><span class="td" style="display:block">${esc(x.d)}</span></span></button>`).join('')}</div>`;
   }
   return h + `<div class="muted small" style="padding:0 4px">ข้อมูลเป็นคำแนะนำทั่วไป กฎของแต่ละประเทศและสายการบินเปลี่ยนได้ ควรเช็กจากแหล่งทางการอีกครั้ง</div>`;
 }
@@ -976,6 +998,7 @@ const A = {
   async copySplit(){ const text = splitText(cur());
     try { await navigator.clipboard.writeText(text); toast('คัดลอกแล้ว วางใน LINE ได้เลย'); }
     catch { const ta = document.createElement('textarea'); ta.value = text; document.body.appendChild(ta); ta.select(); try { document.execCommand('copy'); toast('คัดลอกแล้ว'); } catch { toast('คัดลอกไม่ได้', 'bad'); } ta.remove(); } },
+  tipTab(el){ ui.tipTab = el.dataset.k; render(); },
   cmpToggle(el){ const id = el.dataset.id; ui.cmp.has(id) ? ui.cmp.delete(id) : ui.cmp.add(id); render(); },
   async saveForm(){
     const f = ui.form; if (!f) return;
