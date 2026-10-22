@@ -1,7 +1,7 @@
 // TripBudget service worker — ทำให้แอปเปิดได้แม้ไม่มีเน็ต
 // แก้ index.html แล้วให้เปลี่ยนเลขเวอร์ชันนี้ ผู้ใช้จะได้เวอร์ชันใหม่ตอนเปิดแอปครั้งถัดไป
-const CACHE = 'tripbudget-v4.4.0';
-const CORE = ['./', './index.html', './manifest.json', './icon.svg', './icon-192.png', './icon-512.png'];
+const CACHE = 'tripbudget-v5.0.0';
+const CORE = ['./', './index.html', './countries.js', './manifest.json', './icon.svg', './icon-192.png', './icon-512.png'];
 
 self.addEventListener('install', e => {
   e.waitUntil(caches.open(CACHE).then(c => c.addAll(CORE)).then(() => self.skipWaiting()));

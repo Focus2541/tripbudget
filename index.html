@@ -155,8 +155,19 @@ table.t{width:100%;border-collapse:collapse;font-size:13.5px}table.t th{font-siz
 table.t td{padding:9px 6px;border-bottom:1px solid var(--line)}table.t td.num{white-space:nowrap}table.t tr:last-child td{border-bottom:none}table.t .r{text-align:right}
 .brow{display:flex;align-items:center;gap:10px;padding:7px 0}.brow .lb{width:118px;font-size:13px;flex-shrink:0;white-space:nowrap;overflow:hidden;text-overflow:ellipsis}.brow .bar{flex:1}.brow .v{width:92px;text-align:right;font-size:13px}
 .tgood{color:var(--good)}.tbad{color:var(--bad)}
+.rem{display:flex;gap:10px;align-items:center;padding:10px 0;border-bottom:1px solid var(--line)}.rem:last-child{border-bottom:none}
+.rem .ck{width:26px;height:26px;border-radius:50%;border:2px solid var(--line2);display:grid;place-items:center;font-size:13px;color:transparent;flex-shrink:0}
+.rem.late b{color:var(--bad)}.rem.today b{color:var(--warn)}
+.pl{display:flex;gap:10px;align-items:flex-start;padding:11px 12px;border:1px solid var(--line);border-radius:12px;margin-bottom:6px;background:#fff}
+.pl .tm{font-family:var(--f-num);font-weight:600;color:var(--acc-ink);min-width:46px;padding-top:1px}
+.ib.sosb{color:var(--bad);font-size:13px;font-weight:700;width:auto;padding:0 10px;border:1.5px solid #f1c4c4;height:36px;border-radius:10px}
+.sosnum{font-family:var(--f-num);font-weight:700;color:var(--bad);text-decoration:none}
+#big{position:fixed;inset:0;z-index:400;background:#fff;display:flex;flex-direction:column;justify-content:center;padding:24px 20px calc(64px + env(safe-area-inset-bottom,0px));text-align:center;cursor:pointer}
+#big .bt{font-size:clamp(26px,7.5vw,50px);font-weight:700;line-height:1.35;word-break:break-word;color:var(--ink)}
+#big .bs{font-size:19px;color:var(--ink2);margin-top:18px}
+#big .bh{font-size:13px;color:var(--ink3);position:absolute;bottom:calc(20px + env(safe-area-inset-bottom,0px));left:0;right:0}
 .nav{position:fixed;left:0;right:0;bottom:0;z-index:60;background:#fff;border-top:1px solid var(--line);display:flex;justify-content:center;padding-bottom:env(safe-area-inset-bottom,0px)}
-.nav button{flex:1;max-width:160px;height:var(--nav);display:flex;flex-direction:column;align-items:center;justify-content:center;gap:2px;font-size:12px;font-weight:600;color:var(--ink3);position:relative}
+.nav button{flex:1;max-width:140px;min-width:0;height:var(--nav);display:flex;flex-direction:column;align-items:center;justify-content:center;gap:2px;font-size:12px;font-weight:600;color:var(--ink3);position:relative}
 .nav button span{font-size:22px;line-height:1;filter:grayscale(1);opacity:.55}
 .nav button.on{color:var(--acc-ink)}.nav button.on span{filter:none;opacity:1}
 .nav button.on::after{content:"";position:absolute;top:0;left:30%;right:30%;height:3px;border-radius:0 0 3px 3px;background:var(--acc)}
@@ -193,14 +204,17 @@ table.t td{padding:9px 6px;border-bottom:1px solid var(--line)}table.t td.num{wh
   <div class="logo">Trip<b>Budget</b></div>
   <span class="offpill" id="offline" hidden>ออฟไลน์</span>
   <div id="topTrip"></div>
+  <button class="ib sosb" id="sosBtn" data-act="go" data-v="sos" aria-label="การ์ดฉุกเฉิน" hidden>SOS</button>
   <button class="ib" data-act="menu" aria-label="เมนู">⋮</button>
   <div id="menu" hidden>
     <button data-act="editTrip">✏️ แก้ไขทริปนี้</button>
+    <button data-act="shareTrip" id="shareBtn">📤 แชร์ทริปนี้ให้เพื่อน</button>
+    <button data-act="go" data-v="sos">🆘 การ์ดฉุกเฉิน</button>
     <button data-act="go" data-v="templates">📝 แก้เทมเพลตเตรียมของ</button>
     <button data-act="exportData">💾 สำรองข้อมูล (.json)</button>
     <button data-act="importData">📂 กู้คืนข้อมูล</button>
     <button data-act="install" id="installBtn" hidden>📲 ติดตั้งเป็นแอป</button>
-    <div class="ft">ข้อมูลเก็บในเครื่องนี้เท่านั้น · v4.4</div>
+    <div class="ft" id="menuFt">ข้อมูลเก็บในเครื่องนี้เท่านั้น · v5.0</div>
   </div>
   <input type="file" id="importFile" accept=".json,application/json" hidden>
 </header>
@@ -210,6 +224,7 @@ table.t td{padding:9px 6px;border-bottom:1px solid var(--line)}table.t td.num{wh
 <nav class="nav" aria-label="เมนูหลัก">
   <button data-act="go" data-v="trips"><span>🧳</span>ทริป</button>
   <button data-act="go" data-v="packing"><span>🎒</span>เตรียมของ</button>
+  <button data-act="go" data-v="plan"><span>🗓️</span>แผน</button>
   <button data-act="go" data-v="budget"><span>💰</span>งบประมาณ</button>
   <button data-act="go" data-v="tips"><span>💡</span>เคล็ดลับ</button>
 </nav>
@@ -217,51 +232,15 @@ table.t td{padding:9px 6px;border-bottom:1px solid var(--line)}table.t td.num{wh
 <div class="scrim" id="sheet" hidden></div>
 <div class="scrim" id="dlg" hidden></div>
 <div id="lb" data-act="closeLb" hidden><img id="lbImg" alt="รูปใบเสร็จ"></div>
+<div id="big" data-act="closeBig" hidden></div>
 <div id="toast" role="status" aria-live="polite"></div>
 
+<script src="countries.js"></script>
 <script>
 'use strict';
 /* ============ DATA ============ */
 const KEY = 'tb_v4', RKEY = 'tb_rates', V3KEY = 'tb_v3';
 
-const CURR = {
-  THB:{s:'฿',n:'บาท'}, JPY:{s:'¥',n:'เยน'}, KRW:{s:'₩',n:'วอน'}, CNY:{s:'CN¥',n:'หยวน'}, HKD:{s:'HK$',n:'ดอลลาร์ฮ่องกง'},
-  TWD:{s:'NT$',n:'ดอลลาร์ไต้หวัน'}, SGD:{s:'S$',n:'ดอลลาร์สิงคโปร์'}, MYR:{s:'RM',n:'ริงกิต'}, VND:{s:'₫',n:'ด่ง'},
-  IDR:{s:'Rp',n:'รูเปียห์'}, PHP:{s:'₱',n:'เปโซ'}, LAK:{s:'₭',n:'กีบ'}, KHR:{s:'៛',n:'เรียล'}, MMK:{s:'K',n:'จ๊าด'},
-  INR:{s:'₹',n:'รูปี'}, AED:{s:'AED ',n:'ดิรฮัม'}, GBP:{s:'£',n:'ปอนด์'}, EUR:{s:'€',n:'ยูโร'}, CHF:{s:'CHF ',n:'ฟรังก์สวิส'},
-  USD:{s:'$',n:'ดอลลาร์สหรัฐ'}, CAD:{s:'C$',n:'ดอลลาร์แคนาดา'}, AUD:{s:'A$',n:'ดอลลาร์ออสเตรเลีย'}, NZD:{s:'NZ$',n:'ดอลลาร์นิวซีแลนด์'}
-};
-const ZERO_DEC = new Set(['JPY','KRW','VND','IDR','LAK','KHR','MMK']);
-// เรทสำรอง (บาทต่อ 1 หน่วย) ใช้เมื่อดึงเรทสดไม่ได้เท่านั้น
-const FALLBACK = {USD:32.9,EUR:37.5,JPY:0.22,KRW:0.024,CNY:4.55,HKD:4.2,TWD:1.05,SGD:25.5,MYR:7.6,VND:0.00125,IDR:0.002,PHP:0.57,INR:0.38,LAK:0.0015,KHR:0.0082,MMK:0.0157,GBP:44,CHF:40,AUD:21.5,NZD:19.5,CAD:24,AED:8.96};
-
-// p = ชนิดปลั๊ก, v = แรงดันไฟ, e = [ตำรวจ, รถพยาบาล]
-const COUNTRIES = {
-  TH:{f:'🇹🇭',n:'ไทย (ในประเทศ)',c:'THB',p:'A,B,C,F,O',v:230,e:['191','1669']},
-  JP:{f:'🇯🇵',n:'ญี่ปุ่น',c:'JPY',p:'A,B',v:100,e:['110','119']},
-  KR:{f:'🇰🇷',n:'เกาหลีใต้',c:'KRW',p:'C,F',v:220,e:['112','119']},
-  CN:{f:'🇨🇳',n:'จีน',c:'CNY',p:'A,C,I',v:220,e:['110','120']},
-  HK:{f:'🇭🇰',n:'ฮ่องกง',c:'HKD',p:'G',v:220,e:['999','999']},
-  TW:{f:'🇹🇼',n:'ไต้หวัน',c:'TWD',p:'A,B',v:110,e:['110','119']},
-  SG:{f:'🇸🇬',n:'สิงคโปร์',c:'SGD',p:'G',v:230,e:['999','995']},
-  MY:{f:'🇲🇾',n:'มาเลเซีย',c:'MYR',p:'G',v:240,e:['999','999']},
-  VN:{f:'🇻🇳',n:'เวียดนาม',c:'VND',p:'A,C,F',v:220,e:['113','115']},
-  ID:{f:'🇮🇩',n:'อินโดนีเซีย',c:'IDR',p:'C,F',v:230,e:['110','118']},
-  PH:{f:'🇵🇭',n:'ฟิลิปปินส์',c:'PHP',p:'A,B,C',v:220,e:['911','911']},
-  LA:{f:'🇱🇦',n:'ลาว',c:'LAK',p:'A,B,C,E,F',v:230,e:['1191','1195']},
-  KH:{f:'🇰🇭',n:'กัมพูชา',c:'KHR',p:'A,C,G',v:230,e:['117','119']},
-  MM:{f:'🇲🇲',n:'เมียนมา',c:'MMK',p:'C,D,F,G',v:230,e:['199','192']},
-  IN:{f:'🇮🇳',n:'อินเดีย',c:'INR',p:'C,D,M',v:230,e:['112','112']},
-  AE:{f:'🇦🇪',n:'สหรัฐอาหรับเอมิเรตส์',c:'AED',p:'C,D,G',v:230,e:['999','998']},
-  GB:{f:'🇬🇧',n:'สหราชอาณาจักร',c:'GBP',p:'G',v:230,e:['999','999']},
-  EU:{f:'🇪🇺',n:'ยุโรป (ยูโรโซน)',c:'EUR',p:'C,F',v:230,e:['112','112']},
-  CH:{f:'🇨🇭',n:'สวิตเซอร์แลนด์',c:'CHF',p:'C,J',v:230,e:['117','144']},
-  US:{f:'🇺🇸',n:'สหรัฐอเมริกา',c:'USD',p:'A,B',v:120,e:['911','911']},
-  CA:{f:'🇨🇦',n:'แคนาดา',c:'CAD',p:'A,B',v:120,e:['911','911']},
-  AU:{f:'🇦🇺',n:'ออสเตรเลีย',c:'AUD',p:'I',v:230,e:['000','000']},
-  NZ:{f:'🇳🇿',n:'นิวซีแลนด์',c:'NZD',p:'I',v:230,e:['111','111']},
-  OTHER:{f:'🌍',n:'ประเทศอื่นๆ',c:'',p:'',v:0,e:null}
-};
 const TYPES = {
   leisure:{n:'เที่ยวพักผ่อน',i:'🏖️'}, business:{n:'ธุระ/ทำงาน',i:'💼'}, relative:{n:'ค้างบ้านญาติ',i:'🏡'},
   abroad:{n:'ต่างประเทศ',i:'✈️'}, custom:{n:'กำหนดเอง',i:'✏️'}
@@ -456,7 +435,10 @@ function normalizeTrip(t){
     if (!ids.includes(e.paidBy)) e.paidBy = ids[0]; e.splitAmong = (e.splitAmong || []).filter(x => ids.includes(x)); if (!e.splitAmong.length) e.splitAmong = [...ids]; e.cat = BCATS[e.cat] ? e.cat : 'other'; e.curr = e.curr || 'THB';
     e.rate = e.curr === 'THB' ? 1 : (num(e.rate) || t.rate); e.day = Math.max(0, parseInt(e.day) || 0); e.name = e.name || BCATS[e.cat].n;
     e.note = e.note || ''; e.receipts = Array.isArray(e.receipts) ? e.receipts.filter(r => typeof r === 'string' && !r.startsWith('data:')) : []; });
-  t.tipsDone = t.tipsDone || {};
+  t.tipsDone = t.tipsDone || {}; t.remDone = t.remDone || {};
+  t.sos = Object.assign({hotel:'', hotelAddr:'', hotelPhone:'', insurer:'', policy:'', insPhone:'', embassy:'', note:''}, t.sos || {});
+  t.plan = (Array.isArray(t.plan) ? t.plan : []).map(x => ({id:x.id || uid(), day:Math.max(1, parseInt(x.day) || 1), time:x.time || '', title:x.title || '', place:x.place || '', note:x.note || ''}));
+  t.docs = (Array.isArray(t.docs) ? t.docs : []).map(d => ({id:d.id || uid(), title:d.title || '', kind:d.kind || 'other', files:(Array.isArray(d.files) ? d.files : []).filter(f => f && f.id)}));
   return t;
 }
 function newTrip(f){
@@ -542,6 +524,8 @@ const pct = (a, b) => b ? Math.round(a / b * 100) : 0;
 function vTrips(){
   let h = `<div class="hd"><div><h1>ทริปของฉัน</h1><div class="muted">${db.trips.length ? db.trips.length + ' ทริป' : 'เริ่มจากสร้างทริปแรก'}</div></div>
     <div class="row">${db.trips.length > 1 ? '<button class="btn ghost sm" data-act="go" data-v="compare">⚖️ เทียบ</button>' : ''}<button class="btn pri" data-act="newTrip">+ ทริปใหม่</button></div></div>`;
+  if (db.trips.length) { const ageD = db.lastBackup ? Math.floor((Date.now() - new Date(db.lastBackup)) / 864e5) : null;
+    if (ageD === null || ageD >= 14) h += `<div class="alert warn row" style="margin-bottom:12px"><span class="grow">💾 ${ageD === null ? 'ยังไม่เคยสำรองข้อมูล' : 'ไม่ได้สำรองข้อมูลมา ' + ageD + ' วัน'} ถ้ามือถือหายหรือล้างข้อมูล Chrome ทริปจะหายหมด</span><button class="btn ghost sm" data-act="exportData">สำรองเลย</button></div>`; }
   if (!db.trips.length) return h + `<div class="empty"><div class="e">✈️</div><b>วางแผนทริปในที่เดียว</b>
     <p>สร้างทริปแล้วได้ลิสต์เตรียมของตามประเภททริป ตั้งงบและบันทึกรายจ่าย ถ้าไปต่างประเทศมีเคล็ดลับให้ด้วย</p>
     <button class="btn pri" data-act="newTrip">+ สร้างทริป</button></div>`;
@@ -623,7 +607,7 @@ function vPacking(){
   const t = cur(); if (!t) return needTrip();
   const total = t.packing.length, done = t.packing.filter(p => p.checked).length, miss = missingFromTpl(t).length;
   const list = ui.packFilter === 'todo' ? t.packing.filter(p => !p.checked) : ui.packFilter === 'buy' ? t.packing.filter(p => p.buy) : t.packing;
-  let h = passHtml(t) + `<div class="card"><div class="row"><h2 class="grow">เตรียมของ</h2><b class="num">${done}/${total}</b></div>
+  let h = passHtml(t) + remindersHtml(t, true) + `<div class="card"><div class="row"><h2 class="grow">เตรียมของ</h2><b class="num">${done}/${total}</b></div>
     <div class="bar good mt-s"><i style="width:${pct(done, total)}%"></i></div>
     ${done === total && total ? `<div class="alert good mt">✅ แพ็กครบแล้ว เดินทางปลอดภัยนะ</div>` : ''}
     ${miss ? `<div class="alert info mt row"><span class="grow">มีของในเทมเพลตอีก ${miss} รายการที่ยังไม่อยู่ในลิสต์</span><button class="btn ghost sm" data-act="syncTpl">เพิ่มเข้า</button></div>` : ''}</div>
@@ -827,6 +811,8 @@ function expSheet(t, e){
     <div class="stack">
     ${ab ? `<div class="seg" id="eCurrSeg"><button class="${x.curr !== 'THB' ? 'on' : ''}" data-act="eCurr" data-c="${t.currency}">${t.currency} (${esc(CURR[t.currency] ? CURR[t.currency].n : '')})</button><button class="${x.curr === 'THB' ? 'on' : ''}" data-act="eCurr" data-c="THB">บาท</button></div>` : ''}
     <label class="f">จำนวนเงิน<input id="eAmt" type="number" inputmode="decimal" step="any" value="${x.amount}" placeholder="0" class="num" style="font-size:22px"></label>
+    <div><label class="btn ghost sm" style="cursor:pointer">🔍 สแกนยอดจากรูปใบเสร็จ<input type="file" id="scanFile" accept="image/*" hidden></label>
+    <div id="scanOut" class="chips mt-s"></div></div>
     ${ab ? `<label class="f" id="eRateBox" ${x.curr === 'THB' ? 'hidden' : ''}>เรท 1 ${t.currency} = ? บาท<input id="eRate" type="number" inputmode="decimal" step="any" value="${rateVal(x.curr === 'THB' ? t.rate : x.rate)}" class="num"></label>` : ''}
     <div class="preview" id="ePrev"></div>
     <div><div class="muted small" style="margin-bottom:6px">หมวด</div><div class="chips" id="eCats">${Object.entries(BCATS).map(([k, c]) => `<button class="chip ${k === x.cat ? 'on' : ''}" data-act="eCat" data-k="${k}">${c.i} ${c.n.split(' ')[0]}</button>`).join('')}</div></div>
@@ -893,6 +879,15 @@ function tipItems(t){
     {g:'ap_arr', id:'ap_a2', t:'รับกระเป๋าที่ Baggage Claim', d:'ดูเลขสายพานจากจอตามเที่ยวบิน ถ้ากระเป๋าไม่มา แจ้งเคาน์เตอร์ Lost & Found ก่อนออกจากโซนรับกระเป๋า พร้อมแท็กกระเป๋าและรูปถ่าย'},
     {g:'ap_arr', id:'ap_a3', t:'ผ่านศุลกากร (Customs)', d:'ถ้าไม่มีของต้องสำแดงให้เดินช่องเขียว อาหารสด เนื้อสัตว์ และผลไม้ หลายประเทศห้ามนำเข้า บางประเทศปรับหนัก'},
     {g:'ap_arr', id:'ap_a4', t:'ออกไปเมือง', d:'เปิดใช้ eSIM แลกหรือถอนเงินเล็กน้อย แล้วไปขึ้นรถไฟ แท็กซี่ หรือรถที่จองไว้ ใช้แท็กซี่จากจุดหรือเคาน์เตอร์ทางการ อย่าตามคนที่เดินมาชวนขึ้นรถ'},
+    {g:'survive', id:'sv_closed', t:'ใครทักว่า "ที่นั่นปิดวันนี้ เดี๋ยวพาไปที่อื่น" ให้เดินต่อ', d:'มุกนี้ใช้หลอกพาไปร้านขายของราคาแพงทั่วโลก เช็กเวลาเปิด-ปิดเองจาก Google Maps'},
+    {g:'survive', id:'sv_taxi', t:'ขึ้นแท็กซี่จากแอปหรือคิวทางการ', d:'ถ้าเรียกข้างทาง ให้กดมิเตอร์หรือตกลงราคาก่อนขึ้น ระวังคนที่เดินมาชวนขึ้นรถในสนามบิน'},
+    {g:'survive', id:'sv_atm', t:'กดเงินจากตู้ ATM ในธนาคาร', d:'เอามือบังตอนกดรหัส และสังเกตช่องเสียบบัตรว่ามีอุปกรณ์แปลกปลอมไหม'},
+    {g:'survive', id:'sv_friendly', t:'ระวังคนแปลกหน้าที่เข้ามาตีสนิท', d:'ขอให้ช่วยถ่ายรูป ผูกสายข้อมือให้ หรือยื่นแผ่นลงชื่อ มักเป็นมุกขอเงินหรือล้วงกระเป๋า'},
+    {g:'survive', id:'sv_paper', t:'จดเบอร์ญาติและที่อยู่ที่พักไว้บนกระดาษ', d:'ถ้ามือถือหายหรือแบตหมด ยังติดต่อคนที่บ้านและกลับที่พักได้ หยิบนามบัตรโรงแรมติดตัวไว้ยื่นให้คนขับ'},
+    {g:'survive', id:'sv_loc', t:'แชร์ตำแหน่งแบบเรียลไทม์', d:'แชร์กับคนที่บ้านหรือเพื่อนร่วมทริปผ่าน Google Maps หรือ LINE'},
+    {g:'survive', id:'sv_cam', t:'ใช้ Google Translate แบบกล้อง', d:'ส่องเมนูและป้ายได้ทันที โหลดภาษาปลายทางไว้ใช้ออฟไลน์ ส่วนประโยคขอความช่วยเหลืออยู่ในการ์ดฉุกเฉิน (ปุ่ม SOS)'},
+    {g:'survive', id:'sv_med', t:'เก็บใบเสร็จและใบรับรองแพทย์ทุกใบ', d:'ถ้าต้องไปหาหมอ ใช้เอกสารเหล่านี้เคลมประกันการเดินทางตอนกลับ'},
+    {g:'survive', id:'sv_cash', t:'มีเงินสดพอค่ารถกลับที่พักเสมอ', d:'แบ่งเงินเป็น 3 ส่วน: กระเป๋าสตางค์ เงินซ่อนติดตัว และบัตรสำรองที่เก็บไว้ในที่พัก'},
     {g:'sos', id:'em', t:`เบอร์ฉุกเฉินใน${cn}`, d:c.e ? `ตำรวจ ${c.e[0]} · รถพยาบาล ${c.e[1]} (ข้อมูลทั่วไป ควรเช็กอีกครั้งก่อนเดินทาง)` : 'ค้นหาเบอร์ตำรวจและรถพยาบาลของประเทศปลายทาง', em:c.e},
     {g:'sos', id:'embassy', t:'บันทึกที่อยู่และเบอร์สถานทูตไทย', d:'ค้นหาสถานเอกอัครราชทูตหรือสถานกงสุลใหญ่ไทยในเมืองที่ไป แล้วบันทึกที่อยู่และเบอร์โทรไว้'},
     {g:'sos', id:'lost', t:'รู้ขั้นตอนถ้าพาสปอร์ตหาย', d:'แจ้งความกับตำรวจท้องถิ่นเพื่อขอใบแจ้งความ แล้วนำไปติดต่อสถานทูตหรือสถานกงสุลไทยเพื่อขอเอกสารเดินทางกลับ'},
@@ -900,93 +895,6 @@ function tipItems(t){
     {g:'sos', id:'share', t:'ส่งแผนเดินทางให้ครอบครัว', d:'ส่งเที่ยวบิน ที่พัก และช่องทางติดต่อให้คนที่บ้านไว้'}
   ];
 }
-/* เอกสารเข้าประเทศสำหรับพาสปอร์ตไทย (ข้อมูล ณ ต.ค. 2026) — w = กรอกได้ล่วงหน้ากี่วัน */
-const ENTRY_AS_OF = 'ต.ค. 2026';
-const ENTRY = {
-  JP:{visa:'ไม่ต้องใช้วีซ่า อยู่ได้ 15 วัน', forms:[{n:'Visit Japan Web', d:'กรอกข้อมูลเข้าเมืองและศุลกากรล่วงหน้า ได้ QR code ไว้ใช้ตอนผ่าน ตม. และศุลกากร มีภาษาไทย', u:'https://www.vjw.digital.go.jp/'}]},
-  KR:{visa:'ไม่ต้องใช้วีซ่า แต่คนไทยต้องขอ K-ETA ก่อนเดินทาง (อายุต่ำกว่า 17 หรือ 65 ปีขึ้นไปได้รับยกเว้น)', forms:[
-    {n:'K-ETA', d:'ขอล่วงหน้าอย่างน้อย 72 ชม. ก่อนขึ้นเครื่อง มีค่าธรรมเนียม อนุมัติแล้วใช้ได้ 3 ปี คนไทยถูกปฏิเสธได้ ควรยื่นเร็วและจองตั๋วแบบเปลี่ยนได้', u:'https://www.k-eta.go.kr'},
-    {n:'e-Arrival Card', d:'ใบเข้าเมืองออนไลน์ บังคับตั้งแต่ 1 ม.ค. 2026 ถ้าได้ K-ETA แล้วไม่ต้องกรอก', u:'https://www.e-arrivalcard.go.kr', w:3}]},
-  CN:{visa:'ไม่ต้องใช้วีซ่า อยู่ได้ 30 วันต่อครั้ง', forms:[{n:'ใบเข้าเมืองออนไลน์ (NIA)', d:'ไม่บังคับ ถ้าไม่กรอกล่วงหน้า กรอกที่ด่านได้ กรอกออนไลน์ช่วยให้ไม่ต้องต่อคิว ใช้ได้ทางเว็บหรือแอป 移民局12367', u:'https://s.nia.gov.cn'}]},
-  HK:{visa:'ไม่ต้องใช้วีซ่า อยู่ได้ 30 วัน', forms:[], note:'ไม่ต้องกรอกใบเข้าเมือง'},
-  TW:{visa:'ไม่ต้องใช้วีซ่า อยู่ได้ 14 วัน (มาตรการชั่วคราว ต่ออายุถึง 31 ก.ค. 2027)', forms:[{n:'Taiwan Arrival Card (TWAC)', d:'ใบเข้าเมืองออนไลน์ ใช้แทนแบบกระดาษตั้งแต่ ต.ค. 2025 ฟรี', u:'https://twac.immigration.gov.tw', w:7}]},
-  SG:{visa:'ไม่ต้องใช้วีซ่า อยู่ได้ 30 วัน', forms:[{n:'SG Arrival Card', d:'กรอกทางเว็บ ICA หรือแอป MyICA ฟรี', u:'https://www.ica.gov.sg/enter-transit-depart/entering-singapore/sg-arrival-card', w:3}]},
-  MY:{visa:'ไม่ต้องใช้วีซ่า อยู่ได้ 30 วัน', forms:[{n:'Malaysia Digital Arrival Card (MDAC)', d:'ชาวต่างชาติทุกคนต้องกรอก ฟรี ระวังเว็บปลอมที่เก็บเงิน', u:'https://imigresen-online.imi.gov.my/mdac/main', w:3}]},
-  VN:{visa:'ไม่ต้องใช้วีซ่า อยู่ได้ 30 วัน', forms:[], note:'ไม่ต้องกรอกใบเข้าเมืองล่วงหน้า'},
-  ID:{visa:'ไม่ต้องใช้วีซ่า อยู่ได้ 30 วัน', forms:[
-    {n:'All Indonesia', d:'รวมใบเข้าเมือง ศุลกากร และสุขภาพไว้ในฟอร์มเดียว บังคับตั้งแต่ ต.ค. 2025 กรอกทางเว็บหรือแอป', u:'https://allindonesia.imigrasi.go.id', w:3},
-    {n:'Love Bali (ถ้าไปบาหลี)', d:'ค่าธรรมเนียมนักท่องเที่ยวบาหลี จ่ายออนไลน์ก่อนไปหรือที่สนามบิน', u:'https://lovebali.baliprov.go.id'}]},
-  PH:{visa:'ไม่ต้องใช้วีซ่า อยู่ได้ 30 วัน', forms:[{n:'eTravel', d:'ลงทะเบียนเข้าประเทศ ได้ QR code ฟรี ต้องลงใหม่ทุกทริป', u:'https://etravel.gov.ph', w:3}]},
-  LA:{visa:'ไม่ต้องใช้วีซ่า อยู่ได้ 30 วัน', forms:[{n:'Lao Digital Immigration Form (LDIF)', d:'ใบเข้า-ออกเมืองออนไลน์ ใช้ที่สนามบินวัดไต หลวงพระบาง ปากเซ และสะพานมิตรภาพแห่งแรก (หนองคาย) ได้ QR code ใช้ได้ 3 วัน', u:'https://immigration.gov.la', w:3}]},
-  KH:{visa:'ไม่ต้องใช้วีซ่า อยู่ได้ 14 วัน', forms:[{n:'Cambodia e-Arrival', d:'ผู้เดินทางทุกคนต้องกรอก', u:'https://arrival.gov.kh', w:7}]},
-  MM:{visa:'ไม่ต้องใช้วีซ่า อยู่ได้ 14 วัน', forms:[], note:'เช็กประกาศการเดินทางล่าสุดก่อนไป'},
-  IN:{visa:'ต้องขอ e-Visa ล่วงหน้า', forms:[
-    {n:'India e-Visa', d:'ยื่นออนไลน์ก่อนเดินทาง', u:'https://indianvisaonline.gov.in/evisa/'},
-    {n:'India e-Arrival Card', d:'บังคับสำหรับชาวต่างชาติทุกคน ต้องมีทั้ง e-Visa และ e-Arrival Card หรือใช้แอป Su-Swagatam', u:'https://indianvisaonline.gov.in/earrival', w:3}]},
-  AE:{visa:'ต้องมีวีซ่า ขอผ่านสายการบิน โรงแรม หรือเว็บ ICP', forms:[{n:'UAE ICP (ขอวีซ่า)', d:'ถ้าบินกับสายการบินของ UAE มักขอวีซ่าผ่านสายการบินได้', u:'https://icp.gov.ae'}]},
-  GB:{visa:'ต้องขอวีซ่า (Standard Visitor) ล่วงหน้า', forms:[{n:'UK Standard Visitor visa', d:'ยื่นออนไลน์และนัดสแกนนิ้วที่ศูนย์รับยื่น', u:'https://www.gov.uk/standard-visitor'}]},
-  EU:{visa:'ต้องขอวีซ่าเชงเก้น ยื่นกับสถานทูตประเทศที่พักนานที่สุด', forms:[{n:'ระบบ EES', d:'ขาเข้าครั้งแรกจะเก็บลายนิ้วมือและถ่ายรูปที่ด่าน เผื่อเวลาต่อคิว ไม่ต้องลงทะเบียนล่วงหน้า', u:'https://travel-europe.europa.eu/ees_en'}]},
-  CH:{visa:'ต้องขอวีซ่าเชงเก้น', forms:[{n:'ระบบ EES', d:'ขาเข้าเขตเชงเก้นจะเก็บลายนิ้วมือและถ่ายรูปที่ด่าน', u:'https://travel-europe.europa.eu/ees_en'}]},
-  US:{visa:'ต้องขอวีซ่า (B1/B2) และสัมภาษณ์ที่สถานทูต คนไทยใช้ ESTA ไม่ได้', forms:[{n:'วีซ่าสหรัฐฯ', d:'ข้อมูลการยื่นวีซ่าและนัดสัมภาษณ์จากสถานทูตสหรัฐฯ ประจำประเทศไทย', u:'https://th.usembassy.gov/visas/'}]},
-  CA:{visa:'ต้องขอวีซ่า ยกเว้นเคยมีวีซ่าแคนาดาภายใน 10 ปี หรือมีวีซ่าสหรัฐฯ ที่ยังไม่หมดอายุ อาจขอ eTA แทนได้', forms:[{n:'วีซ่า / eTA แคนาดา', d:'เช็กว่าต้องใช้วีซ่าหรือ eTA จากเว็บรัฐบาลแคนาดา', u:'https://www.canada.ca/en/immigration-refugees-citizenship/services/visit-canada.html'}]},
-  AU:{visa:'ต้องขอวีซ่า Visitor (subclass 600) ยื่นออนไลน์ได้', forms:[{n:'Visitor visa 600', d:'ยื่นผ่าน ImmiAccount ใบเข้าเมืองยังเป็นกระดาษที่ลูกเรือแจก บางสนามบินเริ่มทดลองแบบดิจิทัล', u:'https://immi.homeaffairs.gov.au/visas/getting-a-visa/visa-listing/visitor-600'}]},
-  NZ:{visa:'ต้องขอวีซ่า Visitor ล่วงหน้า', forms:[
-    {n:'NZ Visitor Visa', d:'ยื่นออนไลน์', u:'https://www.immigration.govt.nz'},
-    {n:'NZ Traveller Declaration', d:'แบบสำแดงเข้าประเทศออนไลน์ ฟรี กรอกก่อนบิน', u:'https://www.travellerdeclaration.govt.nz'}]}
-};
-/* กฎ/ข้อห้ามที่นักท่องเที่ยวไทยควรรู้ (ข้อมูลทั่วไป ณ ต.ค. 2026) */
-const RULES = {
-  JP:[['💊','ยาแก้หวัดคัดจมูกบางชนิด (มีซูโดอีเฟดรีน) ห้ามนำเข้า ยาประจำตัวพกได้ประมาณ 1 เดือน ถ้ามากกว่านั้นต้องขออนุญาตล่วงหน้า'],['🛂','ชาวต่างชาติต้องพกพาสปอร์ตตัวจริงติดตัวตลอดเวลา'],['🚭','สูบบุหรี่ได้เฉพาะจุดที่กำหนด ห้ามสูบขณะเดิน'],['🚃','บนรถไฟไม่คุยโทรศัพท์ ตั้งมือถือเป็นโหมดเงียบ'],['🗑️','ถังขยะสาธารณะมีน้อย พกถุงใส่ขยะกลับไปทิ้งเอง'],['💴','ไม่ต้องให้ทิป']],
-  KR:[['🥩','ห้ามนำเนื้อสัตว์และผลิตภัณฑ์จากเนื้อเข้าประเทศ (รวมหมูแผ่น กุนเชียง ไส้กรอก) ฝ่าฝืนปรับหนัก'],['🗺️','Google Maps นำทางในเกาหลีได้ไม่ดี ใช้ Naver Map หรือ KakaoMap แทน'],['🚭','ห้ามสูบบุหรี่ในที่สาธารณะส่วนใหญ่ รวมป้ายรถเมล์'],['💴','ไม่ต้องให้ทิป']],
-  CN:[['📵','Google, LINE, Facebook, Instagram ใช้ผ่านเน็ตจีนไม่ได้ ถ้าใช้ eSIM หรือโรมมิ่งของต่างประเทศจะใช้ได้ ส่งข้อความหาที่บ้านให้เตรียมไว้ก่อน'],['💳','ร้านส่วนใหญ่ใช้ Alipay หรือ WeChat Pay ผูกบัตรต่างประเทศได้ ตั้งค่าก่อนไปและพกเงินสดสำรอง'],['🛂','พกพาสปอร์ตตลอด ใช้ทั้งซื้อตั๋วรถไฟ เข้าสถานที่ท่องเที่ยว และเช็กอินโรงแรม'],['📸','ห้ามบินโดรนในหลายพื้นที่ และห้ามถ่ายรูปสถานที่ทางทหาร']],
-  HK:[['🚭','ห้ามนำบุหรี่ไฟฟ้าและบุหรี่ให้ความร้อนเข้าฮ่องกง ยกเว้นต่อเครื่องโดยไม่ออกจากสนามบิน'],['🚬','บุหรี่ธรรมดานำเข้าแบบไม่เสียภาษีได้ 19 มวน'],['🚇','ห้ามกินดื่มบนรถไฟฟ้า MTR มีค่าปรับ'],['🚯','ทิ้งขยะและสูบบุหรี่ในที่ห้ามมีค่าปรับ']],
-  TW:[['🥩','ห้ามนำเนื้อหมูและผลิตภัณฑ์เนื้อสัตว์เข้า (รวมขนมที่มีหมูหยอง) ครั้งแรกปรับ 200,000 ดอลลาร์ไต้หวัน'],['🚭','บุหรี่ไฟฟ้าผิดกฎหมาย ห้ามนำเข้า'],['🚇','ห้ามกินดื่มในเขตรถไฟฟ้า MRT รวมน้ำเปล่าและหมากฝรั่ง มีค่าปรับ']],
-  SG:[['🚭','บุหรี่ไฟฟ้าผิดกฎหมาย แค่มีไว้ครอบครองก็ถูกปรับ ชาวต่างชาติอาจถูกเนรเทศ'],['🍬','ห้ามนำหมากฝรั่งเข้าประเทศ'],['🚬','บุหรี่ไม่มีโควตายกเว้นภาษี ต้องสำแดงและเสียภาษีทุกซอง'],['🚇','ห้ามกินดื่มบน MRT และห้ามนำทุเรียนขึ้นรถสาธารณะ'],['🚯','ทิ้งขยะ ถ่มน้ำลาย ข้ามถนนนอกทางม้าลาย มีค่าปรับ']],
-  MY:[['💊','ยาเสพติดมีโทษรุนแรงมาก'],['🕌','เข้ามัสยิดแต่งกายมิดชิด คลุมแขนขา ผู้หญิงคลุมผม (มัสยิดใหญ่มีชุดให้ยืม)'],['💳','บัตร Touch \'n Go ใช้จ่ายรถไฟฟ้า รถบัส และทางด่วน']],
-  VN:[['💵','ธนบัตรดองหลักหมื่นกับหลักแสนสีคล้ายกัน นับให้ดีตอนจ่ายและรับเงินทอน'],['🛵','ข้ามถนนให้เดินช้าและสม่ำเสมอ มอเตอร์ไซค์จะหลบเอง อย่าวิ่งหรือหยุดกะทันหัน'],['🛂','โรงแรมจะขอพาสปอร์ตเพื่อแจ้งที่พักกับตำรวจ เป็นเรื่องปกติ']],
-  ID:[['🛕','บาหลี: เข้าวัดต้องนุ่งโสร่งและคาดเอว เคารพสถานที่ศักดิ์สิทธิ์ ห้ามปีนต้นไม้หรือรูปปั้นในวัด'],['💊','ยาเสพติดมีโทษรุนแรงถึงประหารชีวิต'],['🚕','เรียกรถผ่าน Grab หรือ Gojek จะได้ราคาแน่นอน']],
-  PH:[['🚭','ห้ามสูบบุหรี่ในที่สาธารณะทั่วประเทศ'],['💊','ยาเสพติดมีโทษรุนแรง'],['🛺','ตกลงราคาก่อนขึ้นรถสามล้อหรือแท็กซี่ หรือใช้ Grab']],
-  LA:[['🛕','แต่งกายสุภาพเข้าวัด ตักบาตรที่หลวงพระบางให้เงียบและไม่ใช้แฟลช'],['💵','ใช้เงินกีบเป็นหลัก หลายร้านรับเงินบาทแต่ทอนเป็นกีบ'],['🚆','รถไฟลาว-จีนต้องใช้พาสปอร์ตซื้อตั๋ว ช่วงเทศกาลตั๋วหมดเร็ว']],
-  KH:[['💵','ใช้ดอลลาร์สหรัฐได้ทั่วไป แต่ธนบัตรต้องไม่ขาด เงินทอนน้อยๆ มักเป็นเรียล'],['🛕','นครวัด: แต่งกายคลุมไหล่และเข่า และต้องซื้อบัตร Angkor Pass']],
-  MM:[['⚠️','เช็กประกาศความปลอดภัยของกระทรวงการต่างประเทศก่อนเดินทาง บางพื้นที่มีสถานการณ์ไม่สงบ'],['🛕','ถอดรองเท้าและถุงเท้าก่อนเข้าเขตเจดีย์'],['💵','ถ้าพกดอลลาร์ ใช้ธนบัตรใหม่ ไม่ยับ ไม่มีรอยเขียน']],
-  IN:[['🚭','บุหรี่ไฟฟ้าผิดกฎหมาย'],['🛕','ถอดรองเท้าก่อนเข้าวัดและศาสนสถาน แต่งกายมิดชิด'],['🥤','ดื่มน้ำบรรจุขวดเท่านั้น ระวังน้ำแข็งและผักสด']],
-  AE:[['💊','ยาบางชนิด เช่น ที่มีโคเดอีน ต้องขออนุญาตก่อนนำเข้า พกใบสั่งแพทย์ติดตัว'],['👗','แต่งกายสุภาพในที่สาธารณะ ห้ามแสดงความรักในที่สาธารณะ'],['🌙','ช่วงรอมฎอน ห้ามกินดื่มในที่สาธารณะตอนกลางวัน'],['📸','ห้ามถ่ายรูปคนอื่นโดยไม่ได้รับอนุญาต']],
-  GB:[['🥩','ห้ามนำเนื้อสัตว์และผลิตภัณฑ์นมเข้าประเทศ'],['💷','ร้านอาหารมักรวม service charge 10–12.5% ในบิล เช็กก่อนให้ทิปซ้ำ'],['🚇','รถไฟใต้ดินลอนดอนแตะบัตรเครดิตแบบ contactless ได้เลย']],
-  EU:[['🥩','ห้ามนำเนื้อสัตว์และผลิตภัณฑ์นมจากนอก EU เข้า'],['👜','ระวังมิจฉาชีพล้วงกระเป๋าตามจุดท่องเที่ยวและรถไฟฟ้า'],['🎫','ตั๋วรถไฟบางประเทศต้องประทับเวลาก่อนขึ้น (validate) ไม่งั้นโดนปรับ'],['💶','ร้านอาหารส่วนใหญ่รวมค่าบริการแล้ว ทิปเพิ่มหรือไม่ก็ได้']],
-  CH:[['💶','ใช้ฟรังก์สวิส บางที่รับยูโรแต่ทอนเป็นฟรังก์'],['🥩','ห้ามนำเนื้อสัตว์และผลิตภัณฑ์นมจากนอก EU เข้า'],['🛣️','ขับรถบนทางด่วนต้องมีสติกเกอร์ vignette'],['🔇','วันอาทิตย์ร้านค้าส่วนใหญ่ปิด']],
-  US:[['🍎','ต้องสำแดงอาหาร ผลไม้ และเนื้อสัตว์ ถ้าไม่สำแดงโดนปรับ'],['💵','ทิปร้านอาหาร 15–20% และให้ทิปแท็กซี่ ช่างทำผม คนยกกระเป๋าด้วย'],['💵','พกเงินสดเกิน 10,000 ดอลลาร์ต้องสำแดง'],['🍺','ดื่มแอลกอฮอล์ได้เมื่ออายุ 21 ปีขึ้นไป ร้านจะขอดูบัตร']],
-  CA:[['🍎','ต้องสำแดงอาหารทุกชนิด'],['💵','ทิปร้านอาหาร 15–20%'],['💵','พกเงินสดตั้งแต่ 10,000 ดอลลาร์แคนาดาต้องสำแดง']],
-  AU:[['🍎','กฎกักกันเข้มงวดมาก ต้องสำแดงอาหาร ยา เมล็ดพันธุ์ และของที่ทำจากไม้ ถ้าไม่สำแดงอาจโดนปรับหนักหรือยกเลิกวีซ่า'],['🚭','บุหรี่ไฟฟ้ามีข้อจำกัดเข้ม เช็กก่อนพกไป'],['☀️','แดดแรงมาก ทาครีมกันแดดและใส่หมวก']],
-  NZ:[['🍎','กฎกักกันเข้มงวด ไม่สำแดงอาหารโดนปรับทันที 400 ดอลลาร์นิวซีแลนด์'],['🥾','ทำความสะอาดรองเท้าเดินป่าก่อนไป อาจถูกตรวจดิน']]
-};
-/* เว็บ/แอปจองที่พักและเดินทาง */
-const HOTEL_SITES = [['Agoda','https://www.agoda.com','มีโรงแรมในเอเชียเยอะ จ่ายเป็นบาทได้'],['Booking.com','https://www.booking.com','หลายที่ยกเลิกฟรีได้ เหมาะกับยุโรป'],['Trip.com','https://www.trip.com','ที่พัก ตั๋วรถไฟ ตั๋วเครื่องบิน แข็งในจีน'],['Airbnb','https://www.airbnb.com','บ้านและห้องพักรายวัน เหมาะกับไปเป็นกลุ่ม']];
-const TICKET_SITES = [['Klook','https://www.klook.com','บัตรรถไฟ รถรับส่งสนามบิน บัตรเข้าสถานที่'],['KKday','https://www.kkday.com','ทัวร์ บัตรเข้าสถานที่ รถรับส่ง']];
-const TRAVEL = {
-  TH:{go:[['D-Ticket (รถไฟไทย)','https://dticket.railway.co.th','จองตั๋วรถไฟการรถไฟฯ'],['12Go','https://12go.asia','รถทัวร์ รถตู้ เรือ รถไฟ']], local:['Grab','Bolt','LINE MAN']},
-  JP:{go:[['Smart EX (ชินคันเซ็น)','https://smart-ex.jp/en/','จองชินคันเซ็นสาย Tokaido/Sanyo/Kyushu'],['Japan Bus Online','https://japanbusonline.com/en','รถบัสระหว่างเมือง รถบัสกลางคืน'],['Willer Express','https://willerexpress.com/en/','รถบัสกลางคืนราคาประหยัด']], local:['Google Maps (ใช้ได้ดีมาก)','บัตร Suica / PASMO','GO (เรียกแท็กซี่)']},
-  KR:{go:[['Korail','https://www.letskorail.com','รถไฟ KTX'],['Kobus','https://www.kobus.co.kr','รถบัสด่วนระหว่างเมือง']], local:['Naver Map','KakaoMap','Kakao T (แท็กซี่)','บัตร T-money']},
-  CN:{go:[['Trip.com','https://www.trip.com','ตั๋วรถไฟความเร็วสูง ภาษาอังกฤษ'],['12306','https://www.12306.cn','เว็บรถไฟจีนทางการ']], local:['Amap (高德地图)','DiDi','Alipay / WeChat Pay']},
-  HK:{go:[['MTR','https://www.mtr.com.hk','รถไฟฟ้าและ Airport Express']], local:['บัตร Octopus','Citymapper','Uber']},
-  TW:{go:[['THSR (รถไฟความเร็วสูง)','https://www.thsrc.com.tw','จองที่นั่งรถไฟความเร็วสูง'],['TRA (รถไฟไต้หวัน)','https://tip.railway.gov.tw','รถไฟสายปกติ']], local:['บัตร EasyCard','Google Maps','Uber']},
-  SG:{go:[['Easybook','https://www.easybook.com','รถบัสไปมาเลเซีย']], local:['Grab','แตะบัตรเครดิต contactless ขึ้น MRT/รถเมล์','Google Maps']},
-  MY:{go:[['Easybook','https://www.easybook.com','รถบัสระหว่างเมือง'],['KTMB','https://www.ktmb.com.my','รถไฟ ETS']], local:['Grab','บัตร Touch \'n Go']},
-  VN:{go:[['12Go','https://12go.asia','รถบัส รถไฟ'],['Vexere','https://vexere.com','รถบัสระหว่างเมือง']], local:['Grab','Be','Xanh SM']},
-  ID:{go:[['Traveloka','https://www.traveloka.com','ที่พัก รถไฟ เครื่องบินในประเทศ'],['12Go','https://12go.asia','รถบัส เรือข้ามเกาะ']], local:['Grab','Gojek']},
-  PH:{go:[['12Go','https://12go.asia','รถบัส เรือข้ามเกาะ']], local:['Grab']},
-  LA:{go:[['12Go','https://12go.asia','รถบัส รถตู้'],['LCR Ticket (แอป)','','ตั๋วรถไฟลาว-จีน']], local:['LOCA (เรียกรถ)']},
-  KH:{go:[['Giant Ibis','https://www.giantibis.com','รถบัสระหว่างเมือง'],['12Go','https://12go.asia','รถบัส เรือ']], local:['Grab','PassApp']},
-  MM:{go:[['12Go','https://12go.asia','รถบัสระหว่างเมือง']], local:['Grab']},
-  IN:{go:[['IRCTC','https://www.irctc.co.in','รถไฟอินเดีย'],['redBus','https://www.redbus.in','รถบัสระหว่างเมือง']], local:['Uber','Ola']},
-  AE:{go:[['RTA Dubai','https://www.rta.ae','รถไฟฟ้า รถบัส บัตร Nol']], local:['Careem','Uber']},
-  GB:{go:[['Trainline','https://www.thetrainline.com','ตั๋วรถไฟ'],['National Express','https://www.nationalexpress.com','รถโค้ชระหว่างเมือง']], local:['Citymapper','Uber','แตะบัตร contactless']},
-  EU:{go:[['Omio','https://www.omio.com','รวมรถไฟ รถบัส เครื่องบิน'],['FlixBus','https://www.flixbus.com','รถบัสข้ามประเทศราคาถูก'],['Trainline','https://www.thetrainline.com','ตั๋วรถไฟ']], local:['Uber','Bolt','Citymapper']},
-  CH:{go:[['SBB','https://www.sbb.ch','รถไฟสวิส และ Swiss Travel Pass']], local:['แอป SBB Mobile']},
-  US:{go:[['Amtrak','https://www.amtrak.com','รถไฟ'],['Greyhound','https://www.greyhound.com','รถบัสระหว่างเมือง'],['FlixBus','https://www.flixbus.com','รถบัสราคาถูก']], local:['Uber','Lyft']},
-  CA:{go:[['VIA Rail','https://www.viarail.ca','รถไฟ'],['FlixBus','https://www.flixbus.com','รถบัส']], local:['Uber']},
-  AU:{go:[['Greyhound Australia','https://www.greyhound.com.au','รถบัสระหว่างเมือง']], local:['Uber','DiDi','แตะบัตร contactless ขึ้นรถสาธารณะ']},
-  NZ:{go:[['InterCity','https://www.intercity.co.nz','รถบัสระหว่างเมือง']], local:['Uber']}
-};
 function rulesHtml(t){
   const r = RULES[t.country]; if (!r) return '';
   return `<div class="card"><div class="ch"><h2>⚖️ กฎและข้อห้ามใน${esc((country(t) || {}).n || '')}</h2></div>
@@ -1015,11 +923,11 @@ function entryHtml(t){
       return `<div class="tip ${done ? 'done' : ''}" style="cursor:default"><button class="ck" data-act="toggleTip" data-id="${id}" aria-pressed="${done}" aria-label="ทำแล้ว: ${esc(f.n)}" style="cursor:pointer">✓</button>
         <span class="grow"><span class="tt" style="display:block">${esc(f.n)}</span><span class="td" style="display:block">${esc(f.d)}${f.w ? ` กรอกได้ภายใน ${f.w} วันก่อนถึง` : ''}</span>
         ${op ? `<span class="tag ${op.startsWith('กรอกได้') ? 'buy' : ''}" style="display:inline-block;margin-top:4px">📅 ${op}</span> ` : ''}
-        <a class="btn ghost sm mt-s" href="${f.u}" target="_blank" rel="noopener" style="text-decoration:none">เปิดเว็บทางการ ↗</a></span></div>`; }).join('')}
+        ${f.u ? `<a class="btn ghost sm mt-s" href="${f.u}" target="_blank" rel="noopener" style="text-decoration:none">เปิดเว็บทางการ ↗</a>` : ''}</span></div>`; }).join('')}
     ${e.note ? `<div class="muted small mt-s">${esc(e.note)}</div>` : ''}
     <div class="muted small mt-s">ข้อมูลสำหรับพาสปอร์ตไทย ณ ${ENTRY_AS_OF} กฎเปลี่ยนบ่อย เช็กเว็บทางการอีกครั้งก่อนเดินทาง ฟอร์มเหล่านี้ฟรีหรือเก็บค่าธรรมเนียมผ่านเว็บรัฐบาลเท่านั้น ระวังเว็บปลอมที่เก็บเงินเพิ่ม</div></div>`;
 }
-const TIP_GROUPS = {doc:{n:'เอกสาร/วีซ่า',i:'📄'}, money:{n:'เงิน/ธนาคาร',i:'💳'}, prep:{n:'ของต้องเตรียม',i:'🎒'}, sos:{n:'ฉุกเฉิน',i:'🆘'},
+const TIP_GROUPS = {doc:{n:'เอกสาร/วีซ่า',i:'📄'}, money:{n:'เงิน/ธนาคาร',i:'💳'}, prep:{n:'ของต้องเตรียม',i:'🎒'}, survive:{n:'ทริกเอาตัวรอด',i:'🧠'}, sos:{n:'ฉุกเฉิน',i:'🆘'},
   ap_before:{n:'ก่อนวันเดินทาง',i:'📅',ap:true}, ap_bag:{n:'กฎจัดกระเป๋า',i:'🧳',ap:true}, ap_dep:{n:'วันเดินทาง: ทำตามลำดับ',i:'🛫',ap:true,seq:true}, ap_arr:{n:'ถึงปลายทาง: ทำตามลำดับ',i:'🛬',ap:true,seq:true}};
 function vTips(){
   const t = cur(); if (!t) return needTrip();
@@ -1062,18 +970,252 @@ function vTemplates(){
     <button class="btn ghost" data-act="resetTpl" data-k="${g}">รีเซ็ตกลุ่มนี้</button><button class="btn danger" data-act="resetTpl" data-k="all">รีเซ็ตทั้งหมด</button></div>`;
 }
 
+/* ============ REMINDERS ============ */
+function addDays(s, n){ const d = new Date(s + 'T00:00'); d.setDate(d.getDate() + n); return iso(d); }
+function reminders(t){
+  if (!t.startDate) return [];
+  const s = t.startDate, out = [], e = ENTRY[t.country], ab = isAbroad(t);
+  const add = (id, date, text, url) => out.push({id, date, text, url:url || '', done:!!t.remDone[id]});
+  if (ab && e) e.forms.forEach((f, i) => {
+    if (t.tipsDone['entry_' + t.country + '_' + i]) return;
+    if (f.w) add('f' + i, addDays(s, -f.w), `กรอก ${f.n} (กรอกได้ ${f.w} วันก่อนถึง)`, f.u);
+    else if (f.lead) add('f' + i, addDays(s, -f.lead), `ยื่น ${f.n} (ควรยื่นล่วงหน้าอย่างน้อย ${f.lead} วัน)`, f.u);
+  });
+  t.packing.filter(p => p.buy && !p.checked).forEach(p => add('buy_' + p.id, addDays(s, -7), `ซื้อ ${p.name}`));
+  if (ab) { add('checkin', addDays(s, -2), 'เช็กอินออนไลน์ (เปิด 24–48 ชม. ก่อนบิน)'); if (t.currency && t.currency !== 'THB') add('cash', addDays(s, -3), `แลกเงิน ${t.currency} ติดตัวบางส่วน`); }
+  if (!t.sos.hotelAddr) add('sos', addDays(s, -3), 'กรอกการ์ดฉุกเฉิน: ที่อยู่ที่พัก เบอร์ติดต่อ ประกัน');
+  const left = t.packing.filter(p => !p.checked).length;
+  if (left) add('pack', addDays(s, -1), `แพ็กของให้ครบ (เหลือ ${left} รายการ)`);
+  return out.sort((a, b) => a.date < b.date ? -1 : a.date > b.date ? 1 : 0);
+}
+const remState = r => { const td = todayIso(); return r.done ? 'done' : r.date < td ? 'late' : r.date === td ? 'today' : 'soon'; };
+function gcalUrl(t, r){
+  const d1 = r.date.replace(/-/g, ''), d2 = addDays(r.date, 1).replace(/-/g, '');
+  return 'https://calendar.google.com/calendar/render?action=TEMPLATE&text=' + encodeURIComponent('✈️ ' + r.text) + '&dates=' + d1 + '/' + d2 +
+    '&details=' + encodeURIComponent('ทริป: ' + (t.name || '') + (r.url ? '\n' + r.url : '') + '\n(จาก TripBudget)');
+}
+function remindersHtml(t, compact){
+  if (!t.startDate) return compact ? '' : `<div class="card"><div class="ch"><h2>🔔 สิ่งที่ต้องทำ</h2></div><div class="muted small">ใส่วันเดินทางในหน้าแก้ไขทริป แอปจะบอกว่าต้องทำอะไรวันไหน <button class="link" data-act="editTrip">ใส่วัน</button></div></div>`;
+  const all = reminders(t), open = all.filter(r => !r.done), soonLimit = addDays(todayIso(), 3);
+  const list = compact ? open.filter(r => r.date <= soonLimit).slice(0, 3) : open;
+  if (compact && !list.length) return '';
+  const label = r => { const s = remState(r); return s === 'late' ? `เลยกำหนด · ${thDate(r.date)}` : s === 'today' ? 'วันนี้' : thDate(r.date); };
+  const canNotify = 'Notification' in window && Notification.permission === 'default';
+  return `<div class="card"><div class="ch"><h2>🔔 สิ่งที่ต้องทำ</h2>${compact ? `<button class="btn ghost sm" data-act="go" data-v="plan">ดูทั้งหมด</button>` : `<span class="muted small num">${all.length - open.length}/${all.length}</span>`}</div>
+    ${list.length ? list.map(r => `<div class="rem ${remState(r)}"><button class="ck" data-act="remDone" data-id="${r.id}" aria-label="ทำแล้ว">✓</button>
+      <div class="grow"><b>${esc(r.text)}</b><div class="muted small">${label(r)}</div></div>
+      ${r.url ? `<a class="btn ghost sm" href="${r.url}" target="_blank" rel="noopener" style="text-decoration:none" aria-label="เปิดเว็บ">↗</a>` : ''}
+      ${compact ? '' : `<a class="btn ghost sm" href="${gcalUrl(t, r)}" target="_blank" rel="noopener" style="text-decoration:none" aria-label="ใส่ปฏิทิน">📅</a>`}</div>`).join('')
+      : `<div class="alert good">✅ ทำครบแล้ว</div>`}
+    ${!compact ? `<div class="muted small mt-s">กด 📅 เพื่อใส่ใน Google Calendar จะได้แจ้งเตือนแม้ไม่ได้เปิดแอป${canNotify ? ' · <button class="link" data-act="askNotify">เปิดแจ้งเตือนเมื่อเปิดแอป</button>' : ''}</div>` : ''}</div>`;
+}
+async function notifyDue(){
+  if (!('Notification' in window) || Notification.permission !== 'granted') return;
+  const td = todayIso(); db.notified = db.notified || {}; let n = 0;
+  let reg = null; try { reg = navigator.serviceWorker && await navigator.serviceWorker.getRegistration(); } catch {}
+  for (const t of db.trips) for (const r of reminders(t)) {
+    if (r.done || r.date > td || n >= 3) continue; const k = t.id + ':' + r.id; if (db.notified[k] === td) continue;
+    db.notified[k] = td; n++;
+    try { if (reg) reg.showNotification(t.name || 'TripBudget', {body:r.text, icon:'icon-192.png', tag:k}); else new Notification(t.name || 'TripBudget', {body:r.text}); } catch {}
+  }
+  if (n) save();
+}
+
+/* ============ VIEW: PLAN (แผนเที่ยว + ตั๋ว/ใบจอง) ============ */
+const DOC_KINDS = {flight:'✈️ ตั๋วเครื่องบิน', hotel:'🏨 ใบจองที่พัก', entry:'🛂 ใบเข้าเมือง / QR', insurance:'🛡️ กรมธรรม์ประกัน', ticket:'🎟️ ตั๋วรถไฟ/รถบัส/สถานที่', other:'📄 อื่นๆ'};
+const mapUrl = q => 'https://www.google.com/maps/search/?api=1&query=' + encodeURIComponent(q);
+function vPlan(){
+  const t = cur(); if (!t) return needTrip();
+  let h = passHtml(t) + remindersHtml(t, false);
+  h += `<div class="row" style="margin:18px 2px 6px"><h2 class="grow">🗓️ แผนเที่ยวรายวัน</h2><button class="btn ghost sm" data-act="addPlan" data-d="${currentDay(t) || 1}">+ เพิ่ม</button></div>`;
+  if (!t.plan.length) h += `<div class="card flat muted small">ยังไม่มีแผน กด "+ เพิ่ม" ใส่สถานที่ เวลา และที่อยู่ แล้วกดนำทางด้วย Google Maps ได้</div>`;
+  for (let d = 1; d <= days(t); d++) {
+    const items = t.plan.filter(x => x.day === d).sort((a, b) => (a.time || '99') < (b.time || '99') ? -1 : 1);
+    if (!items.length && t.plan.length) continue; if (!items.length) continue;
+    const dd = dayDate(t, d);
+    h += `<div class="dayhd"><span>วันที่ ${d}${dd ? ' · ' + thDate(dd) : ''}</span><button class="link" data-act="addPlan" data-d="${d}">+ เพิ่มในวันนี้</button></div>` +
+      items.map(x => `<div class="pl"><span class="tm">${esc(x.time || '—')}</span><div class="grow" data-act="editPlan" data-id="${x.id}" style="cursor:pointer">
+        <b style="display:block;word-break:break-word">${esc(x.title)}</b>${x.place ? `<span class="muted small" style="display:block;word-break:break-word">📍 ${esc(x.place)}</span>` : ''}${x.note ? `<span class="muted small" style="display:block">${esc(x.note)}</span>` : ''}</div>
+        ${x.place ? `<a class="btn ghost sm" href="${mapUrl(x.place)}" target="_blank" rel="noopener" style="text-decoration:none">นำทาง</a>` : ''}</div>`).join('');
+  }
+  const extra = t.plan.filter(x => x.day > days(t));
+  if (extra.length) h += `<div class="alert warn mt">มี ${extra.length} รายการอยู่นอกช่วงวันเดินทาง แตะเพื่อแก้วัน</div>` + extra.map(x => `<div class="pl" data-act="editPlan" data-id="${x.id}"><b>${esc(x.title)}</b></div>`).join('');
+  h += `<div class="row" style="margin:20px 2px 6px"><h2 class="grow">📎 ตั๋วและใบจอง</h2><button class="btn ghost sm" data-act="addDoc">+ เพิ่ม</button></div>
+    <div class="muted small" style="margin:0 2px 8px">เก็บรูปหรือ PDF ไว้ในเครื่อง เปิดดูได้แม้ไม่มีเน็ต</div>`;
+  if (!t.docs.length) h += `<div class="card flat muted small">ยังไม่มีไฟล์ แนะนำเก็บตั๋วเครื่องบิน ใบจองที่พัก QR ใบเข้าเมือง และกรมธรรม์ประกัน</div>`;
+  h += t.docs.map(d => `<div class="card tight"><div class="row"><b class="grow" data-act="editDoc" data-id="${d.id}" style="cursor:pointer">${esc(DOC_KINDS[d.kind] || '📄')} · ${esc(d.title)}</b><button class="btn ghost sm" data-act="editDoc" data-id="${d.id}">แก้ไข</button></div>
+    <div class="thumbs mt-s">${d.files.map(f => f.type === 'pdf' ? `<button class="btn ghost sm" data-act="openFile" data-id="${f.id}">📄 ${esc(f.name || 'PDF')}</button>` : `<img data-rid="${f.id}" data-act="lb" alt="${esc(d.title)}" style="width:72px;height:72px;object-fit:cover;border-radius:10px;border:1px solid var(--line)">`).join('') || '<span class="muted small">ยังไม่มีไฟล์</span>'}</div></div>`).join('');
+  return h + `<button class="fab" data-act="addPlan" data-d="${currentDay(t) || 1}" aria-label="เพิ่มแผน">＋</button>`;
+}
+function planSheet(t, x, day){
+  const it = x || {day:day || 1, time:'', title:'', place:'', note:''};
+  S = {kind:'plan', id:x ? x.id : null};
+  let opts = ''; for (let i = 1; i <= Math.max(days(t), it.day); i++) { const dd = dayDate(t, i); opts += `<option value="${i}" ${i === it.day ? 'selected' : ''}>วันที่ ${i}${dd ? ' · ' + thDate(dd) : ''}</option>`; }
+  openSheet(`<div class="sh"><b>${x ? 'แก้ไขแผน' : 'เพิ่มแผน'}</b><button class="x" data-act="closeSheet" aria-label="ปิด">✕</button></div>
+    <div class="stack"><div class="g2"><label class="f">วัน<select id="pDay">${opts}</select></label><label class="f">เวลา<input id="pTime" type="time" value="${esc(it.time)}"></label></div>
+    <label class="f">ทำอะไร<input id="pTitle" value="${esc(it.title)}" placeholder="เช่น วัดเซ็นโซจิ" maxlength="80"></label>
+    <label class="f">สถานที่ / ที่อยู่ (ใช้นำทาง)<input id="pPlace" value="${esc(it.place)}" placeholder="ชื่อสถานที่หรือที่อยู่" maxlength="200"></label>
+    <label class="f">หมายเหตุ<input id="pNote" value="${esc(it.note)}" placeholder="เช่น ซื้อตั๋วล่วงหน้า ปิดวันจันทร์" maxlength="160"></label></div>
+    <div class="sf">${x ? `<button class="btn danger" data-act="delPlan">ลบ</button>` : ''}<span class="sp"></span><button class="btn ghost" data-act="closeSheet">ยกเลิก</button><button class="btn pri" data-act="savePlan">บันทึก</button></div>`);
+  if (!x) setTimeout(() => $('#pTitle') && $('#pTitle').focus(), 100);
+}
+function docSheet(t, d){
+  const it = d || {title:'', kind:'flight', files:[]};
+  S = {kind:'doc', id:d ? d.id : null, files:clone(it.files), added:[], removed:[]};
+  openSheet(`<div class="sh"><b>${d ? 'แก้ไขเอกสาร' : 'เพิ่มตั๋ว/ใบจอง'}</b><button class="x" data-act="closeSheet" aria-label="ปิด">✕</button></div>
+    <div class="stack"><label class="f">ประเภท<select id="dKind">${Object.entries(DOC_KINDS).map(([k, n]) => `<option value="${k}" ${k === it.kind ? 'selected' : ''}>${n}</option>`).join('')}</select></label>
+    <label class="f">ชื่อ<input id="dTitle" value="${esc(it.title)}" placeholder="เช่น TG682 ขาไป / โรงแรมชินจูกุ" maxlength="80"></label>
+    <div><div class="thumbs" id="dFiles"></div><label class="upload mt-s">📷 เพิ่มรูปหรือ PDF<input type="file" id="dFile" accept="image/*,application/pdf" multiple hidden></label>
+    <div class="muted small mt-s">ภาพ QR จะเก็บความละเอียดสูงไว้ให้สแกนได้</div></div></div>
+    <div class="sf">${d ? `<button class="btn danger" data-act="delDoc">ลบ</button>` : ''}<span class="sp"></span><button class="btn ghost" data-act="closeSheet">ยกเลิก</button><button class="btn pri" data-act="saveDoc">บันทึก</button></div>`);
+  renderDocFiles();
+}
+function renderDocFiles(){
+  const el = $('#dFiles'); if (!el || !S) return;
+  el.innerHTML = S.files.map(f => `<div class="th">${f.type === 'pdf' ? `<span class="tag" style="display:grid;place-items:center;width:64px;height:64px;border-radius:10px">PDF</span>` : `<img data-rid="${f.id}" data-act="lb" alt="">`}<button data-act="delDocFile" data-id="${f.id}" aria-label="ลบไฟล์">✕</button></div>`).join('');
+  hydrate(el);
+}
+function readDataUrl(file){ return new Promise((res, rej) => { const fr = new FileReader(); fr.onload = () => res(fr.result); fr.onerror = rej; fr.readAsDataURL(file); }); }
+async function openFile(id){
+  let v = thumbs.get(id); if (!v) { try { v = await IDB.get(id); } catch {} }
+  if (!v) { toast('ไม่พบไฟล์', 'bad'); return; }
+  const blob = await (await fetch(v)).blob(), url = URL.createObjectURL(blob);
+  const a = document.createElement('a'); a.href = url; a.target = '_blank'; a.rel = 'noopener'; document.body.appendChild(a); a.click();
+  setTimeout(() => { a.remove(); URL.revokeObjectURL(url); }, 60000);
+}
+
+/* ============ VIEW: SOS (การ์ดฉุกเฉินออฟไลน์) ============ */
+function vSos(){
+  const t = cur(), p = db.profile, c = t ? (country(t) || {}) : COUNTRIES.TH, s = t ? t.sos : {};
+  const lang = c.lang || 'en', L = PHRASES[lang] || PHRASES.en;
+  const tel = n => n ? `<a class="sosnum" href="tel:${esc(n.replace(/[^\d+]/g, ''))}">${esc(n)}</a>` : '';
+  const row = (ic, label, val) => val ? `<div class="fact"><span class="ic">${ic}</span><span class="muted small">${label}</span><b style="word-break:break-word">${val}</b></div>` : '';
+  let h = `<div class="hd"><div><h1>🆘 การ์ดฉุกเฉิน</h1><div class="muted">เปิดได้แม้ไม่มีเน็ต · ข้อมูลอยู่ในเครื่องนี้เท่านั้น</div></div><button class="btn pri sm" data-act="editSos">แก้ไข</button></div>`;
+  if (c.e) h += `<div class="card"><div class="ch"><h2>📞 เบอร์ฉุกเฉิน${t ? ' · ' + esc(c.n || '') : ''}</h2></div><div class="em">
+    <a href="tel:${c.e[0]}">👮 ตำรวจ ${c.e[0]}</a>${c.e[1] !== c.e[0] ? `<a href="tel:${c.e[1]}">🚑 รถพยาบาล ${c.e[1]}</a>` : ''}</div></div>`;
+  if (t) h += `<div class="card"><div class="ch"><h2>🏨 ที่พัก</h2>${s.hotelAddr ? `<button class="btn ghost sm" data-act="bigText" data-k="address">แสดงคนขับ</button>` : ''}</div>
+    ${s.hotel || s.hotelAddr ? row('🏷️', 'ชื่อ', esc(s.hotel)) + row('📍', 'ที่อยู่', esc(s.hotelAddr)) + row('☎️', 'โทร', tel(s.hotelPhone)) +
+      (s.hotelAddr ? `<a class="btn ghost sm mt-s" href="${mapUrl(s.hotel + ' ' + s.hotelAddr)}" target="_blank" rel="noopener" style="text-decoration:none">🗺️ นำทางกลับที่พัก</a>` : '')
+      : `<div class="muted small">ยังไม่ได้ใส่ ก๊อปที่อยู่ภาษาท้องถิ่นจากใบจองมาวางไว้ จะยื่นให้คนขับแท็กซี่ได้</div>`}</div>`;
+  h += `<div class="card"><div class="ch"><h2>👤 ข้อมูลของฉัน</h2></div>
+    ${p.name || p.blood || p.allergies || p.meds ? row('🪪', 'ชื่อ (ตามพาสปอร์ต)', esc(p.name)) + row('🩸', 'กรุ๊ปเลือด', esc(p.blood)) + row('⚠️', 'แพ้ยา/อาหาร', esc(p.allergies)) + row('💊', 'ยาที่ใช้ประจำ', esc(p.meds)) : '<div class="muted small">ยังไม่ได้ใส่</div>'}
+    ${p.contacts.filter(x => x.phone).length ? `<div class="muted small" style="font-weight:700;margin-top:10px">ติดต่อฉุกเฉิน</div>` + p.contacts.filter(x => x.phone).map(x => `<div class="row" style="padding:6px 0"><span class="grow">${esc(x.name || 'ไม่ระบุชื่อ')}</span>${tel(x.phone)}</div>`).join('') : ''}</div>`;
+  if (t && (s.insurer || s.policy || s.insPhone)) h += `<div class="card"><div class="ch"><h2>🛡️ ประกันการเดินทาง</h2></div>${row('🏢', 'บริษัท', esc(s.insurer))}${row('#️⃣', 'เลขกรมธรรม์', esc(s.policy))}${row('☎️', 'สายด่วน 24 ชม.', tel(s.insPhone))}</div>`;
+  if (t && s.embassy) h += `<div class="card"><div class="ch"><h2>🇹🇭 สถานทูต/กงสุลไทย</h2></div><div style="white-space:pre-wrap;word-break:break-word">${esc(s.embassy)}</div></div>`;
+  if (t && s.note) h += `<div class="card"><div class="ch"><h2>📝 บันทึก</h2></div><div style="white-space:pre-wrap;word-break:break-word">${esc(s.note)}</div></div>`;
+  h += `<div class="card"><div class="ch"><h2>🗣️ ประโยคขอความช่วยเหลือ</h2></div><div class="muted small" style="margin-bottom:6px">แตะเพื่อแสดงตัวใหญ่ให้คนท้องถิ่นอ่าน</div>
+    ${PHRASE_KEYS.map(([k, th]) => `<button class="tip" data-act="bigText" data-k="${k}"><span class="grow"><span class="muted small" style="display:block">${th}</span>
+      <span class="tt" style="display:block;font-size:17px" lang="${lang}">${esc(L[k])}</span>${lang !== 'en' ? `<span class="td" style="display:block">${esc(PHRASES.en[k])}</span>` : ''}</span></button>`).join('')}</div>`;
+  return h;
+}
+function showBig(k){
+  const t = cur(), c = t ? (country(t) || {}) : {}, lang = c.lang || 'en', L = PHRASES[lang] || PHRASES.en, p = db.profile;
+  let main = L[k] || '', sub = lang !== 'en' ? PHRASES.en[k] : '';
+  if (k === 'address' && t) { main += '\n\n' + (t.sos.hotel ? t.sos.hotel + '\n' : '') + t.sos.hotelAddr; }
+  if (k === 'allergy' && p.allergies) main += '\n' + p.allergies;
+  const el = $('#big');
+  el.innerHTML = `<div class="bt" lang="${lang}" style="white-space:pre-wrap">${esc(main)}</div>${sub ? `<div class="bs">${esc(sub)}</div>` : ''}<div class="bh">แตะเพื่อปิด</div>`;
+  el.hidden = false;
+}
+function sosSheet(){
+  const t = cur(), p = db.profile, s = t ? t.sos : {};
+  S = {kind:'sos'};
+  const f = (id, label, val, ph, type='text') => `<label class="f">${label}<input id="${id}" type="${type}" value="${esc(val || '')}" placeholder="${ph}"></label>`;
+  openSheet(`<div class="sh"><b>แก้ไขการ์ดฉุกเฉิน</b><button class="x" data-act="closeSheet" aria-label="ปิด">✕</button></div>
+    <div class="stack"><div class="muted small" style="font-weight:700">👤 ข้อมูลของฉัน (ใช้ทุกทริป)</div>
+    ${f('sName', 'ชื่อ-นามสกุล (ตามพาสปอร์ต)', p.name, 'SOMCHAI JAIDEE')}
+    <div class="g2">${f('sBlood', 'กรุ๊ปเลือด', p.blood, 'เช่น O')}${f('sMeds', 'ยาที่ใช้ประจำ', p.meds, 'ชื่อยาภาษาอังกฤษ')}</div>
+    ${f('sAllergy', 'แพ้ยา/อาหาร (ภาษาอังกฤษ)', p.allergies, 'เช่น Penicillin, peanuts')}
+    ${p.contacts.map((x, i) => `<div class="g2">${f('sCn' + i, 'ผู้ติดต่อ ' + (i + 1), x.name, 'ชื่อ / ความสัมพันธ์')}${f('sCp' + i, 'เบอร์', x.phone, '+66 8x xxx xxxx', 'tel')}</div>`).join('')}
+    ${t ? `<div class="muted small" style="font-weight:700;margin-top:6px">🏨 ทริปนี้</div>
+    ${f('sHotel', 'ชื่อที่พัก', s.hotel, 'เช่น Hotel Gracery Shinjuku')}
+    <label class="f">ที่อยู่ที่พัก (ภาษาท้องถิ่นหรืออังกฤษ)<textarea id="sAddr" rows="3" placeholder="ก๊อปจากใบจองมาวาง">${esc(s.hotelAddr)}</textarea></label>
+    ${f('sHotelTel', 'เบอร์ที่พัก', s.hotelPhone, '+81 ...', 'tel')}
+    <div class="g2">${f('sIns', 'บริษัทประกัน', s.insurer, '')}${f('sPolicy', 'เลขกรมธรรม์', s.policy, '')}</div>
+    ${f('sInsTel', 'สายด่วนประกัน 24 ชม.', s.insPhone, '', 'tel')}
+    <label class="f">สถานทูต/กงสุลไทย (ที่อยู่ เบอร์)<textarea id="sEmb" rows="2" placeholder="ค้นหา สถานเอกอัครราชทูตไทย ประจำ...">${esc(s.embassy)}</textarea></label>
+    <label class="f">บันทึกอื่นๆ<textarea id="sNote" rows="2" placeholder="เช่น เลขการจอง ที่จอดรถ">${esc(s.note)}</textarea></label>` : ''}</div>
+    <div class="sf"><span class="sp"></span><button class="btn ghost" data-act="closeSheet">ยกเลิก</button><button class="btn pri" data-act="saveSos">บันทึก</button></div>`);
+}
+
+/* ============ RECEIPT SCAN (OCR) ============ */
+let ocrWorker = null;
+function loadScript(src){ return new Promise((res, rej) => { const s = document.createElement('script'); s.src = src; s.onload = res; s.onerror = rej; document.head.appendChild(s); }); }
+async function ocrText(img){
+  if (!window.Tesseract) await loadScript('https://cdn.jsdelivr.net/npm/tesseract.js@5.1.1/dist/tesseract.min.js');
+  if (!ocrWorker) ocrWorker = await Tesseract.createWorker('eng');
+  const r = await ocrWorker.recognize(img); return (r && r.data && r.data.text) || '';
+}
+function parseAmount(raw, zero){
+  let s = raw.replace(/\s/g, '');
+  if (/^\d{1,3}([.,]\d{3})+$/.test(s)) return +s.replace(/[.,]/g, '');
+  const m = s.match(/^(\d{1,3}(?:[.,]\d{3})*|\d+)[.,](\d{1,2})$/);
+  if (m) return +(m[1].replace(/[.,]/g, '') + '.' + m[2]);
+  return +s.replace(/[.,]/g, '');
+}
+function amountsFrom(text, curr){
+  const zero = ZERO_DEC.has(curr), KW = /(total|grand|amount|due|sum|balance|合計|合计|总计|小計|計|합계|결제|tổng|jumlah|รวม|ยอด)/i, NEG = /(change|cash|tax|vat|tel|phone|no\.|#|お釣|釣銭|おつり|税)/i;
+  const out = [];
+  text.split(/\n/).forEach(ln => {
+    ln = ln.replace(/\+?\d{1,4}[-\/.\s]\d{2,4}[-\/.\s]\d{2,4}(?:[-\/.\s]\d{1,4})?/g, m => /^\d{1,3}([.,]\d{3})+([.,]\d{1,2})?$/.test(m.trim()) ? m : ' ');
+    const nums = ln.match(/\d{1,3}(?:[.,\s]\d{3})+(?:[.,]\d{1,2})?|\d+(?:[.,]\d{1,2})?/g) || [];
+    nums.forEach(raw => { const v = parseAmount(raw, zero); if (!(v > 0) || v > 1e8) return;
+      if (/^\d{8,}$/.test(raw.replace(/\D/g, ''))) return;
+      if (!KW.test(ln) && v >= 1990 && v <= 2099 && !/[.,]/.test(raw)) return;
+      out.push({v, score:(KW.test(ln) ? 2 : 0) - (NEG.test(ln) ? 1 : 0)}); });
+  });
+  out.sort((a, b) => b.score - a.score || b.v - a.v);
+  const seen = new Set(), res = []; for (const x of out) { if (seen.has(x.v)) continue; seen.add(x.v); res.push(x.v); if (res.length >= 4) break; }
+  return res;
+}
+
+/* ============ SHARE TRIP ============ */
+async function collectFiles(trips){
+  const files = {};
+  for (const t of trips) {
+    const ids = [...t.expenses.flatMap(e => e.receipts), ...(t.docs || []).flatMap(d => d.files.map(f => f.id))];
+    for (const id of ids) { try { const v = await IDB.get(id); if (v) files[id] = v; } catch {} }
+  }
+  return files;
+}
+async function shareTrip(){
+  const t = cur(); if (!t) return;
+  const r = await dialog({title:'แชร์ทริปนี้ให้เพื่อน', text:'ได้ไฟล์ .json ส่งทาง LINE หรือแอปอื่น เพื่อนกด ⋮ → กู้คืนข้อมูล แล้วเลือกไฟล์นี้ในแอป TripBudget',
+    body:`<label class="tog" style="margin-bottom:6px"><input type="checkbox" name="files">รวมรูปใบเสร็จ ตั๋ว และใบจอง (ไฟล์จะใหญ่ขึ้น)</label>
+    <label class="tog"><input type="checkbox" name="sos">รวมข้อมูลการ์ดฉุกเฉินของทริป (ที่พัก ประกัน)</label>`, ok:'แชร์'});
+  if (!r) return;
+  const copy = clone(t); if (!r.sos) copy.sos = {};
+  if (!r.files) { copy.expenses.forEach(e => e.receipts = []); copy.docs = []; }
+  const data = {app:'TripBudget', version:4, kind:'trip', exportedAt:new Date().toISOString(), trips:[copy], receipts:r.files ? await collectFiles([copy]) : {}};
+  const name = 'tripbudget-' + (t.name || 'trip').replace(/[\\/:*?"<>|\s]+/g, '-').slice(0, 40) + '.json';
+  const file = new File([JSON.stringify(data)], name, {type:'application/json'});
+  try { if (navigator.canShare && navigator.canShare({files:[file]})) { await navigator.share({files:[file], title:t.name || 'ทริป', text:'ทริปจาก TripBudget'}); return; } } catch (e) { if (e && e.name === 'AbortError') return; }
+  download(name, JSON.stringify(data), 'application/json'); toast('บันทึกไฟล์แล้ว ส่งให้เพื่อนได้เลย');
+}
+
 /* ============ BACKUP ============ */
 async function exportData(){
-  const receipts = {};
-  for (const t of db.trips) for (const e of t.expenses) for (const id of e.receipts) { try { const v = await IDB.get(id); if (v) receipts[id] = v; } catch {} }
+  const receipts = await collectFiles(db.trips);
   download(`tripbudget-backup-${todayIso()}.json`, JSON.stringify({app:'TripBudget', version:4, exportedAt:new Date().toISOString(), trips:db.trips, templates:db.templates, receipts}), 'application/json');
+  db.lastBackup = new Date().toISOString(); save(); if (ui.view === 'trips') render();
   toast('สำรองข้อมูลแล้ว เก็บไฟล์ไว้ใน Google Drive ได้');
 }
 async function importData(file){
   let d; try { d = JSON.parse(await file.text()); } catch { toast('อ่านไฟล์ไม่ได้ ต้องเป็นไฟล์ .json จากแอปนี้', 'bad'); return; }
   const arr = d && Array.isArray(d.trips) ? d.trips : null;
   if (!arr) { toast('ไม่พบข้อมูลทริปในไฟล์นี้', 'bad'); return; }
-  const isV3 = arr.some(t => t.members || t.flight || t.hotels);
+  const isV3 = arr.some(t => t.flight || t.hotels);
+  if (d.kind === 'trip' && !isV3) {
+    const t0 = arr[0], exists = db.trips.some(x => x.id === t0.id);
+    const r1 = await dialog({title:`นำเข้าทริป "${t0.name || 'ทริป'}"?`, text:exists ? 'มีทริปนี้ในเครื่องอยู่แล้ว เลือกว่าจะทำอย่างไร' : 'ทริปจะถูกเพิ่มเข้าในรายการทริปของคุณ',
+      body:exists ? `<label class="f">ทำอย่างไร<select name="mode"><option value="copy">เพิ่มเป็นทริปใหม่ (เก็บของเดิมไว้)</option><option value="replace">แทนที่ทริปเดิม</option></select></label>` : '', ok:'นำเข้า'});
+    if (!r1) return;
+    for (const [id, v] of Object.entries(d.receipts || {})) { try { await IDB.put(id, v); } catch {} }
+    const t = normalizeTrip(clone(t0));
+    if (exists && r1.mode !== 'replace') { t.id = uid(); t.name = (t.name || 'ทริป') + ' (จากเพื่อน)'; db.trips.push(t); }
+    else { const i = db.trips.findIndex(x => x.id === t.id); if (i >= 0) db.trips[i] = t; else db.trips.push(t); }
+    db.currentId = t.id; save(); go('packing'); toast('นำเข้าทริปแล้ว'); return;
+  }
   const r = await dialog({title:`กู้คืน ${arr.length} ทริป?`, text:'ทริปที่มีอยู่แล้ว (ID เดียวกัน) จะถูกแทนที่ด้วยข้อมูลในไฟล์' + (d.templates && !isV3 ? '\nเทมเพลตเตรียมของจะถูกแทนที่ด้วย' : ''), ok:'กู้คืน'});
   if (!r) return;
   for (const [id, v] of Object.entries(d.receipts || {})) { try { await IDB.put(id, v); } catch {} }
@@ -1085,14 +1227,15 @@ async function importData(file){
 }
 
 /* ============ RENDER ============ */
-const VIEWS = {trips:vTrips, form:vForm, packing:vPacking, budget:vBudget, tips:vTips, templates:vTemplates, split:vSplit, compare:vCompare};
+const VIEWS = {trips:vTrips, form:vForm, packing:vPacking, budget:vBudget, tips:vTips, templates:vTemplates, split:vSplit, compare:vCompare, plan:vPlan, sos:vSos};
 function render(){
   const v = VIEWS[ui.view] ? ui.view : 'trips';
   $('#view').innerHTML = VIEWS[v]();
   const navKey = {form:'trips', compare:'trips', templates:'packing', split:'budget'}[v] || v;
   $$('.nav button').forEach(b => b.classList.toggle('on', b.dataset.v === navKey));
   const t = cur(); $('#topTrip').textContent = t && v !== 'trips' ? ((country(t) || {f:'🌍'}).f + ' ' + (t.name || 'ทริปไม่มีชื่อ')) : '';
-  $('[data-act="editTrip"]', $('#menu')).hidden = !t;
+  $('[data-act="editTrip"]', $('#menu')).hidden = !t; $('#shareBtn').hidden = !t; $('#sosBtn').hidden = !t || v === 'sos';
+  $('#menuFt').textContent = 'ข้อมูลเก็บในเครื่องนี้เท่านั้น · v5.0' + (db.lastBackup ? ' · สำรองล่าสุด ' + ago(db.lastBackup) : ' · ยังไม่เคยสำรอง');
   hydrate($('#view'));
 }
 let prevView = 'trips';
@@ -1140,7 +1283,7 @@ const A = {
   async delTrip(){
     const f = ui.form, t = f && db.trips.find(x => x.id === f.id); if (!t) return;
     if (!await dialog({title:`ลบทริป "${t.name || 'ทริปไม่มีชื่อ'}"?`, text:'ลบแล้วกู้คืนไม่ได้ ถ้าไม่มีไฟล์สำรอง', ok:'ลบทริป', danger:true})) return;
-    t.expenses.forEach(e => e.receipts.forEach(r => IDB.del(r)));
+    t.expenses.forEach(e => e.receipts.forEach(r => IDB.del(r))); t.docs.forEach(d => d.files.forEach(f => IDB.del(f.id)));
     db.trips = db.trips.filter(x => x !== t); if (db.currentId === t.id) db.currentId = null; ui.form = null; save(); go('trips'); toast('ลบทริปแล้ว', 'warn');
   },
   openTrip(el){ if (db.currentId !== el.dataset.id) { ui.calDay = null; ui.expCat = ''; } db.currentId = el.dataset.id; save(); go('packing'); },
@@ -1210,6 +1353,37 @@ const A = {
     const d = tplWithIds(DEFAULT_TPL()); if (k === 'all') db.templates = d; else db.templates[k] = d[k]; save(); render(); toast('รีเซ็ตแล้ว'); },
   exportData(){ closeMenu(); exportData(); },
   importData(){ closeMenu(); $('#importFile').click(); },
+  remDone(el){ const t = cur(); t.remDone[el.dataset.id] = true; save(); render(); toast('ทำแล้ว ✓'); },
+  async askNotify(){ try { const r = await Notification.requestPermission(); if (r === 'granted') { toast('เปิดแจ้งเตือนแล้ว'); notifyDue(); } else toast('ไม่ได้เปิดแจ้งเตือน', 'warn'); } catch {} render(); },
+  addPlan(el){ planSheet(cur(), null, +el.dataset.d || 1); },
+  editPlan(el){ const t = cur(), x = t.plan.find(p => p.id === el.dataset.id); if (x) planSheet(t, x); },
+  savePlan(){ const t = cur(), title = $('#pTitle').value.trim(); if (!title) { toast('ใส่ว่าจะทำอะไรก่อน', 'bad'); $('#pTitle').focus(); return; }
+    const v = {day:+$('#pDay').value || 1, time:$('#pTime').value, title, place:$('#pPlace').value.trim(), note:$('#pNote').value.trim()};
+    const edit = !!S.id; if (edit) Object.assign(t.plan.find(p => p.id === S.id), v); else t.plan.push({id:uid(), ...v});
+    save(); closeSheet(); render(); toast(edit ? 'แก้ไขแล้ว' : 'เพิ่มแผนแล้ว'); },
+  async delPlan(){ const t = cur(); t.plan = t.plan.filter(p => p.id !== S.id); save(); closeSheet(); render(); toast('ลบแล้ว', 'warn'); },
+  addDoc(){ docSheet(cur(), null); },
+  editDoc(el){ const t = cur(), d = t.docs.find(x => x.id === el.dataset.id); if (d) docSheet(t, d); },
+  delDocFile(el){ const id = el.dataset.id; S.files = S.files.filter(f => f.id !== id);
+    if (S.added.includes(id)) { S.added = S.added.filter(x => x !== id); IDB.del(id); } else S.removed.push(id); renderDocFiles(); },
+  saveDoc(){ const t = cur(), kind = $('#dKind').value, title = $('#dTitle').value.trim() || DOC_KINDS[kind].replace(/^\S+\s/, '');
+    const v = {title, kind, files:S.files}; const edit = !!S.id;
+    if (edit) Object.assign(t.docs.find(x => x.id === S.id), v); else t.docs.push({id:uid(), ...v});
+    S.removed.forEach(id => IDB.del(id)); S.added = []; save(); closeSheet(); render(); toast(edit ? 'แก้ไขแล้ว' : 'เก็บเอกสารแล้ว'); },
+  async delDoc(){ const t = cur(), d = t.docs.find(x => x.id === S.id); if (!d) return;
+    if (!await dialog({title:`ลบ "${d.title}"?`, text:'ไฟล์ที่แนบไว้จะถูกลบด้วย', ok:'ลบ', danger:true})) return;
+    [...d.files.map(f => f.id), ...S.added].forEach(id => IDB.del(id)); S.added = []; t.docs = t.docs.filter(x => x !== d); save(); closeSheet(); render(); toast('ลบแล้ว', 'warn'); },
+  openFile(el){ openFile(el.dataset.id); },
+  editSos(){ sosSheet(); },
+  saveSos(){ const p = db.profile, v = id => ($('#' + id) || {}).value || '';
+    Object.assign(p, {name:v('sName').trim(), blood:v('sBlood').trim(), meds:v('sMeds').trim(), allergies:v('sAllergy').trim()});
+    p.contacts = p.contacts.map((c, i) => ({name:v('sCn' + i).trim(), phone:v('sCp' + i).trim()}));
+    const t = cur(); if (t) Object.assign(t.sos, {hotel:v('sHotel').trim(), hotelAddr:v('sAddr').trim(), hotelPhone:v('sHotelTel').trim(), insurer:v('sIns').trim(), policy:v('sPolicy').trim(), insPhone:v('sInsTel').trim(), embassy:v('sEmb').trim(), note:v('sNote').trim()});
+    save(); closeSheet(); render(); toast('บันทึกการ์ดฉุกเฉินแล้ว'); },
+  bigText(el){ showBig(el.dataset.k); },
+  closeBig(){ $('#big').hidden = true; },
+  shareTrip(){ closeMenu(); shareTrip(); },
+  scanPick(el){ $('#eAmt').value = el.dataset.v; expPreview(); $$('#scanOut .chip').forEach(c => c.classList.toggle('on', c === el)); },
   async install(){ closeMenu(); if (!deferredPrompt) return; deferredPrompt.prompt(); await deferredPrompt.userChoice; deferredPrompt = null; $('#installBtn').hidden = true; }
 };
 
@@ -1249,6 +1423,29 @@ document.addEventListener('input', e => {
 });
 document.addEventListener('change', async e => {
   const el = e.target;
+  if (el.id === 'scanFile' && el.files[0] && S) {
+    const file = el.files[0]; el.value = ''; const out = $('#scanOut');
+    if (!navigator.onLine) { toast('การสแกนต้องใช้อินเทอร์เน็ต', 'warn'); return; }
+    out.innerHTML = '<span class="muted small">⏳ กำลังอ่านใบเสร็จ... (ครั้งแรกอาจใช้เวลาสักพัก)</span>';
+    try {
+      const v = await compress(file, 1600, .85);
+      const id = uid(); await IDB.put(id, v); thumbs.set(id, v); if (S) { S.receipts.push(id); S.added.push(id); renderThumbs(); }
+      const text = await ocrText(v); if (!S || !$('#scanOut')) return;
+      const nums = amountsFrom(text, S.curr);
+      $('#scanOut').innerHTML = nums.length ? '<span class="muted small" style="width:100%">แตะยอดที่ถูกต้อง:</span>' + nums.map((n, i) => `<button class="chip ${i === 0 ? 'on' : ''}" data-act="scanPick" data-v="${n}">${fmt(n, 2)}</button>`).join('') : '<span class="muted small">อ่านยอดไม่ได้ ลองถ่ายให้ชัดขึ้น หรือพิมพ์เอง</span>';
+      if (nums.length && !num($('#eAmt').value)) { $('#eAmt').value = nums[0]; expPreview(); }
+    } catch { const o = $('#scanOut'); if (o) o.innerHTML = '<span class="muted small">สแกนไม่สำเร็จ ลองใหม่หรือพิมพ์ยอดเอง</span>'; }
+    return;
+  }
+  if (el.id === 'dFile' && el.files.length && S) {
+    for (const file of [...el.files]) { try {
+      const isPdf = file.type === 'application/pdf';
+      if (isPdf && file.size > 15e6) { toast('PDF ใหญ่เกิน 15MB', 'bad'); continue; }
+      const v = isPdf ? await readDataUrl(file) : await compress(file, 2000, .88); const id = uid(); await IDB.put(id, v); thumbs.set(id, v);
+      if (!S) { IDB.del(id); return; } S.files.push({id, type:isPdf ? 'pdf' : 'image', name:file.name}); S.added.push(id);
+    } catch { toast('เพิ่มไฟล์ไม่สำเร็จ', 'bad'); } }
+    el.value = ''; renderDocFiles(); return;
+  }
   if (el.id === 'eFile' && el.files.length && S) {
     for (const file of [...el.files]) { try { const v = await compress(file); const id = uid(); await IDB.put(id, v); thumbs.set(id, v); if (!S) { IDB.del(id); return; } S.receipts.push(id); S.added.push(id); } catch { toast('แนบรูปไม่สำเร็จ', 'bad'); } }
     el.value = ''; renderThumbs(); return;
@@ -1258,6 +1455,7 @@ document.addEventListener('change', async e => {
 });
 document.addEventListener('keydown', e => {
   if (e.key !== 'Escape') return;
+  if (!$('#big').hidden) { $('#big').hidden = true; return; }
   if (!$('#lb').hidden) { $('#lb').hidden = true; return; }
   if (!$('#dlg').hidden) return;
   if (S) closeSheet(); closeMenu();
@@ -1274,6 +1472,8 @@ document.addEventListener('visibilitychange', () => { if (document.visibilitySta
   try { const d = JSON.parse(localStorage.getItem(KEY)); if (d && Array.isArray(d.trips)) db = d; } catch {}
   try { const r = JSON.parse(localStorage.getItem(RKEY)); if (r && r.rates) rates = {rates:r.rates, at:r.at || r.updated || null}; } catch {}
   if (!db.templates) db.templates = tplWithIds(DEFAULT_TPL());
+  db.profile = Object.assign({name:'', blood:'', allergies:'', meds:'', contacts:[{name:'', phone:''}, {name:'', phone:''}]}, db.profile || {});
+  if (!Array.isArray(db.profile.contacts) || !db.profile.contacts.length) db.profile.contacts = [{name:'', phone:''}, {name:'', phone:''}];
   let migrated = 0;
   if (!localStorage.getItem(KEY)) {
     try { const old = JSON.parse(localStorage.getItem(V3KEY)); if (old && Array.isArray(old.trips) && old.trips.length) {
@@ -1283,7 +1483,7 @@ document.addEventListener('visibilitychange', () => { if (document.visibilitySta
   if (db.currentId && !cur()) db.currentId = null;
   save();
   ui.view = db.currentId ? 'packing' : 'trips';
-  render(); setOnline();
+  render(); setOnline(); setTimeout(notifyDue, 1500);
   if (migrated) setTimeout(() => dialog({title:`ย้ายข้อมูลเดิม ${migrated} ทริปแล้ว`, text:'รายจ่าย ตั๋ว และที่พักเดิมอยู่ในหน้างบประมาณ งบรวมเดิมใส่ไว้ในหมวด "อื่นๆ" ปรับแยกหมวดได้ที่ปุ่ม "ตั้งงบ"\nแนะนำกดสำรองข้อมูลเก็บไว้หนึ่งครั้ง', ok:'เข้าใจแล้ว', cancel:''}), 300);
   if (!ratesFresh()) fetchRates();
   if (navigator.storage && navigator.storage.persist) navigator.storage.persist().catch(() => {});
