@@ -200,7 +200,7 @@ table.t td{padding:9px 6px;border-bottom:1px solid var(--line)}table.t td.num{wh
     <button data-act="exportData">💾 สำรองข้อมูล (.json)</button>
     <button data-act="importData">📂 กู้คืนข้อมูล</button>
     <button data-act="install" id="installBtn" hidden>📲 ติดตั้งเป็นแอป</button>
-    <div class="ft">ข้อมูลเก็บในเครื่องนี้เท่านั้น · v4.2</div>
+    <div class="ft">ข้อมูลเก็บในเครื่องนี้เท่านั้น · v4.3</div>
   </div>
   <input type="file" id="importFile" accept=".json,application/json" hidden>
 </header>
@@ -855,7 +855,7 @@ function tipItems(t){
   const c = country(t) || {}, cn = c.n || 'ประเทศปลายทาง', cu = t.currency || 'ท้องถิ่น', pi = plugInfo(c);
   return [
     {g:'doc', id:'passport', t:'พาสปอร์ตอายุเหลืออย่างน้อย 6 เดือน', d:'นับจากวันเดินทาง และควรมีหน้าว่างอย่างน้อย 2 หน้า ถ้าไม่พอให้ทำเล่มใหม่ก่อน เพราะต้องใช้เวลาหลายวัน'},
-    {g:'doc', id:'visa', t:`เช็กเงื่อนไขวีซ่าของ${cn}`, d:'ดูจากเว็บสถานทูตของประเทศปลายทางหรือเว็บกรมการกงสุล บางประเทศไม่ต้องใช้วีซ่าแต่ต้องลงทะเบียนเข้าประเทศออนไลน์ล่วงหน้า เงื่อนไขเปลี่ยนบ่อย ควรเช็กใกล้วันเดินทาง'},
+    {g:'doc', id:'visa', t:`เช็กเงื่อนไขวีซ่าของ${cn}`, d:(ENTRY[t.country] ? 'สรุปอยู่ในการ์ด "เอกสารเข้าประเทศ" ด้านบน ' : '') + 'ดูจากเว็บสถานทูตของประเทศปลายทางหรือเว็บกรมการกงสุล บางประเทศไม่ต้องใช้วีซ่าแต่ต้องลงทะเบียนเข้าประเทศออนไลน์ล่วงหน้า เงื่อนไขเปลี่ยนบ่อย ควรเช็กใกล้วันเดินทาง'},
     {g:'doc', id:'offline', t:'เก็บเอกสารสำคัญแบบออฟไลน์', d:'ถ่ายรูปพาสปอร์ต วีซ่า ตั๋ว ใบจองที่พัก และกรมธรรม์ เก็บไว้ทั้งในเครื่องและคลาวด์ พกสำเนากระดาษแยกจากตัวจริง'},
     {g:'doc', id:'proof', t:'เตรียมคำตอบให้ ตม.', d:'ตั๋วขากลับ ที่อยู่ที่พักคืนแรก และแผนเที่ยวคร่าวๆ เจ้าหน้าที่อาจถามตอนเข้าเมือง'},
     {g:'doc', id:'arrival', t:'เช็กว่าต้องกรอกเอกสารเข้าเมืองออนไลน์ไหม', d:'หลายประเทศให้กรอกใบเข้าเมืองหรือใบศุลกากรล่วงหน้าทางเว็บหรือแอป แล้วได้ QR code มาใช้ตอนผ่าน ตม.'},
@@ -900,6 +900,55 @@ function tipItems(t){
     {g:'sos', id:'share', t:'ส่งแผนเดินทางให้ครอบครัว', d:'ส่งเที่ยวบิน ที่พัก และช่องทางติดต่อให้คนที่บ้านไว้'}
   ];
 }
+/* เอกสารเข้าประเทศสำหรับพาสปอร์ตไทย (ข้อมูล ณ ต.ค. 2026) — w = กรอกได้ล่วงหน้ากี่วัน */
+const ENTRY_AS_OF = 'ต.ค. 2026';
+const ENTRY = {
+  JP:{visa:'ไม่ต้องใช้วีซ่า อยู่ได้ 15 วัน', forms:[{n:'Visit Japan Web', d:'กรอกข้อมูลเข้าเมืองและศุลกากรล่วงหน้า ได้ QR code ไว้ใช้ตอนผ่าน ตม. และศุลกากร มีภาษาไทย', u:'https://www.vjw.digital.go.jp/'}]},
+  KR:{visa:'ไม่ต้องใช้วีซ่า แต่คนไทยต้องขอ K-ETA ก่อนเดินทาง (อายุต่ำกว่า 17 หรือ 65 ปีขึ้นไปได้รับยกเว้น)', forms:[
+    {n:'K-ETA', d:'ขอล่วงหน้าอย่างน้อย 72 ชม. ก่อนขึ้นเครื่อง มีค่าธรรมเนียม อนุมัติแล้วใช้ได้ 3 ปี คนไทยถูกปฏิเสธได้ ควรยื่นเร็วและจองตั๋วแบบเปลี่ยนได้', u:'https://www.k-eta.go.kr'},
+    {n:'e-Arrival Card', d:'ใบเข้าเมืองออนไลน์ บังคับตั้งแต่ 1 ม.ค. 2026 ถ้าได้ K-ETA แล้วไม่ต้องกรอก', u:'https://www.e-arrivalcard.go.kr', w:3}]},
+  CN:{visa:'ไม่ต้องใช้วีซ่า อยู่ได้ 30 วันต่อครั้ง', forms:[{n:'ใบเข้าเมืองออนไลน์ (NIA)', d:'ไม่บังคับ ถ้าไม่กรอกล่วงหน้า กรอกที่ด่านได้ กรอกออนไลน์ช่วยให้ไม่ต้องต่อคิว ใช้ได้ทางเว็บหรือแอป 移民局12367', u:'https://s.nia.gov.cn'}]},
+  HK:{visa:'ไม่ต้องใช้วีซ่า อยู่ได้ 30 วัน', forms:[], note:'ไม่ต้องกรอกใบเข้าเมือง'},
+  TW:{visa:'ไม่ต้องใช้วีซ่า อยู่ได้ 14 วัน (มาตรการชั่วคราว ต่ออายุถึง 31 ก.ค. 2027)', forms:[{n:'Taiwan Arrival Card (TWAC)', d:'ใบเข้าเมืองออนไลน์ ใช้แทนแบบกระดาษตั้งแต่ ต.ค. 2025 ฟรี', u:'https://twac.immigration.gov.tw', w:7}]},
+  SG:{visa:'ไม่ต้องใช้วีซ่า อยู่ได้ 30 วัน', forms:[{n:'SG Arrival Card', d:'กรอกทางเว็บ ICA หรือแอป MyICA ฟรี', u:'https://www.ica.gov.sg/enter-transit-depart/entering-singapore/sg-arrival-card', w:3}]},
+  MY:{visa:'ไม่ต้องใช้วีซ่า อยู่ได้ 30 วัน', forms:[{n:'Malaysia Digital Arrival Card (MDAC)', d:'ชาวต่างชาติทุกคนต้องกรอก ฟรี ระวังเว็บปลอมที่เก็บเงิน', u:'https://imigresen-online.imi.gov.my/mdac/main', w:3}]},
+  VN:{visa:'ไม่ต้องใช้วีซ่า อยู่ได้ 30 วัน', forms:[], note:'ไม่ต้องกรอกใบเข้าเมืองล่วงหน้า'},
+  ID:{visa:'ไม่ต้องใช้วีซ่า อยู่ได้ 30 วัน', forms:[
+    {n:'All Indonesia', d:'รวมใบเข้าเมือง ศุลกากร และสุขภาพไว้ในฟอร์มเดียว บังคับตั้งแต่ ต.ค. 2025 กรอกทางเว็บหรือแอป', u:'https://allindonesia.imigrasi.go.id', w:3},
+    {n:'Love Bali (ถ้าไปบาหลี)', d:'ค่าธรรมเนียมนักท่องเที่ยวบาหลี จ่ายออนไลน์ก่อนไปหรือที่สนามบิน', u:'https://lovebali.baliprov.go.id'}]},
+  PH:{visa:'ไม่ต้องใช้วีซ่า อยู่ได้ 30 วัน', forms:[{n:'eTravel', d:'ลงทะเบียนเข้าประเทศ ได้ QR code ฟรี ต้องลงใหม่ทุกทริป', u:'https://etravel.gov.ph', w:3}]},
+  LA:{visa:'ไม่ต้องใช้วีซ่า อยู่ได้ 30 วัน', forms:[{n:'Lao Digital Immigration Form (LDIF)', d:'ใบเข้า-ออกเมืองออนไลน์ ใช้ที่สนามบินวัดไต หลวงพระบาง ปากเซ และสะพานมิตรภาพแห่งแรก (หนองคาย) ได้ QR code ใช้ได้ 3 วัน', u:'https://immigration.gov.la', w:3}]},
+  KH:{visa:'ไม่ต้องใช้วีซ่า อยู่ได้ 14 วัน', forms:[{n:'Cambodia e-Arrival', d:'ผู้เดินทางทุกคนต้องกรอก', u:'https://arrival.gov.kh', w:7}]},
+  MM:{visa:'ไม่ต้องใช้วีซ่า อยู่ได้ 14 วัน', forms:[], note:'เช็กประกาศการเดินทางล่าสุดก่อนไป'},
+  IN:{visa:'ต้องขอ e-Visa ล่วงหน้า', forms:[
+    {n:'India e-Visa', d:'ยื่นออนไลน์ก่อนเดินทาง', u:'https://indianvisaonline.gov.in/evisa/'},
+    {n:'India e-Arrival Card', d:'บังคับสำหรับชาวต่างชาติทุกคน ต้องมีทั้ง e-Visa และ e-Arrival Card หรือใช้แอป Su-Swagatam', u:'https://indianvisaonline.gov.in/earrival', w:3}]},
+  AE:{visa:'ต้องมีวีซ่า ขอผ่านสายการบิน โรงแรม หรือเว็บ ICP', forms:[{n:'UAE ICP (ขอวีซ่า)', d:'ถ้าบินกับสายการบินของ UAE มักขอวีซ่าผ่านสายการบินได้', u:'https://icp.gov.ae'}]},
+  GB:{visa:'ต้องขอวีซ่า (Standard Visitor) ล่วงหน้า', forms:[{n:'UK Standard Visitor visa', d:'ยื่นออนไลน์และนัดสแกนนิ้วที่ศูนย์รับยื่น', u:'https://www.gov.uk/standard-visitor'}]},
+  EU:{visa:'ต้องขอวีซ่าเชงเก้น ยื่นกับสถานทูตประเทศที่พักนานที่สุด', forms:[{n:'ระบบ EES', d:'ขาเข้าครั้งแรกจะเก็บลายนิ้วมือและถ่ายรูปที่ด่าน เผื่อเวลาต่อคิว ไม่ต้องลงทะเบียนล่วงหน้า', u:'https://travel-europe.europa.eu/ees_en'}]},
+  CH:{visa:'ต้องขอวีซ่าเชงเก้น', forms:[{n:'ระบบ EES', d:'ขาเข้าเขตเชงเก้นจะเก็บลายนิ้วมือและถ่ายรูปที่ด่าน', u:'https://travel-europe.europa.eu/ees_en'}]},
+  US:{visa:'ต้องขอวีซ่า (B1/B2) และสัมภาษณ์ที่สถานทูต คนไทยใช้ ESTA ไม่ได้', forms:[{n:'วีซ่าสหรัฐฯ', d:'ข้อมูลการยื่นวีซ่าและนัดสัมภาษณ์จากสถานทูตสหรัฐฯ ประจำประเทศไทย', u:'https://th.usembassy.gov/visas/'}]},
+  CA:{visa:'ต้องขอวีซ่า ยกเว้นเคยมีวีซ่าแคนาดาภายใน 10 ปี หรือมีวีซ่าสหรัฐฯ ที่ยังไม่หมดอายุ อาจขอ eTA แทนได้', forms:[{n:'วีซ่า / eTA แคนาดา', d:'เช็กว่าต้องใช้วีซ่าหรือ eTA จากเว็บรัฐบาลแคนาดา', u:'https://www.canada.ca/en/immigration-refugees-citizenship/services/visit-canada.html'}]},
+  AU:{visa:'ต้องขอวีซ่า Visitor (subclass 600) ยื่นออนไลน์ได้', forms:[{n:'Visitor visa 600', d:'ยื่นผ่าน ImmiAccount ใบเข้าเมืองยังเป็นกระดาษที่ลูกเรือแจก บางสนามบินเริ่มทดลองแบบดิจิทัล', u:'https://immi.homeaffairs.gov.au/visas/getting-a-visa/visa-listing/visitor-600'}]},
+  NZ:{visa:'ต้องขอวีซ่า Visitor ล่วงหน้า', forms:[
+    {n:'NZ Visitor Visa', d:'ยื่นออนไลน์', u:'https://www.immigration.govt.nz'},
+    {n:'NZ Traveller Declaration', d:'แบบสำแดงเข้าประเทศออนไลน์ ฟรี กรอกก่อนบิน', u:'https://www.travellerdeclaration.govt.nz'}]}
+};
+function entryHtml(t){
+  const e = ENTRY[t.country]; if (!e) return '';
+  const c = country(t) || {}, s = t.startDate;
+  const opens = w => { if (!s || !w) return ''; const d = new Date(s + 'T00:00'); d.setDate(d.getDate() - w); const o = iso(d), today = todayIso();
+    return today < o ? `เปิดให้กรอก ${thDate(o)}` : today <= s ? 'กรอกได้แล้วตอนนี้' : ''; };
+  return `<div class="card"><div class="ch"><h2>📝 เอกสารเข้า${esc(c.n || '')}</h2></div>
+    <div class="fact"><span class="ic">🛂</span><b>วีซ่า</b><span class="muted small">${esc(e.visa)}</span></div>
+    ${e.forms.map((f, i) => { const id = 'entry_' + t.country + '_' + i, done = !!t.tipsDone[id], op = opens(f.w);
+      return `<div class="tip ${done ? 'done' : ''}" style="cursor:default"><button class="ck" data-act="toggleTip" data-id="${id}" aria-pressed="${done}" aria-label="ทำแล้ว: ${esc(f.n)}" style="cursor:pointer">✓</button>
+        <span class="grow"><span class="tt" style="display:block">${esc(f.n)}</span><span class="td" style="display:block">${esc(f.d)}${f.w ? ` กรอกได้ภายใน ${f.w} วันก่อนถึง` : ''}</span>
+        ${op ? `<span class="tag ${op.startsWith('กรอกได้') ? 'buy' : ''}" style="display:inline-block;margin-top:4px">📅 ${op}</span> ` : ''}
+        <a class="btn ghost sm mt-s" href="${f.u}" target="_blank" rel="noopener" style="text-decoration:none">เปิดเว็บทางการ ↗</a></span></div>`; }).join('')}
+    ${e.note ? `<div class="muted small mt-s">${esc(e.note)}</div>` : ''}
+    <div class="muted small mt-s">ข้อมูลสำหรับพาสปอร์ตไทย ณ ${ENTRY_AS_OF} กฎเปลี่ยนบ่อย เช็กเว็บทางการอีกครั้งก่อนเดินทาง ฟอร์มเหล่านี้ฟรีหรือเก็บค่าธรรมเนียมผ่านเว็บรัฐบาลเท่านั้น ระวังเว็บปลอมที่เก็บเงินเพิ่ม</div></div>`;
+}
 const TIP_GROUPS = {doc:{n:'เอกสาร/วีซ่า',i:'📄'}, money:{n:'เงิน/ธนาคาร',i:'💳'}, prep:{n:'ของต้องเตรียม',i:'🎒'}, sos:{n:'ฉุกเฉิน',i:'🆘'},
   ap_before:{n:'ก่อนวันเดินทาง',i:'📅',ap:true}, ap_bag:{n:'กฎจัดกระเป๋า',i:'🧳',ap:true}, ap_dep:{n:'วันเดินทาง: ทำตามลำดับ',i:'🛫',ap:true,seq:true}, ap_arr:{n:'ถึงปลายทาง: ทำตามลำดับ',i:'🛬',ap:true,seq:true}};
 function vTips(){
@@ -915,7 +964,7 @@ function vTips(){
     <div class="fact"><span class="ic">💱</span><b>${esc(t.currency || '-')} ${CURR[t.currency] ? '· ' + CURR[t.currency].n : ''}</b><span class="muted small">1 ${t.currency} = ${fmtRate(t.rate)} บาท · 1,000 บาท ≈ ${money(1000 / (t.rate || 1), t.currency)}</span></div>
     ${pi ? `<div class="fact"><span class="ic">🔌</span><b>${pi.types}</b><span class="muted small">${pi.need}${pi.volt}</span></div>` : ''}
     ${c.e ? `<div class="fact"><span class="ic">🆘</span><b>เบอร์ฉุกเฉิน</b><div class="em"><a href="tel:${c.e[0]}">👮 ${c.e[0]}</a>${c.e[1] !== c.e[0] ? `<a href="tel:${c.e[1]}">🚑 ${c.e[1]}</a>` : `<span class="muted small" style="align-self:center">ตำรวจและรถพยาบาลเบอร์เดียวกัน</span>`}</div></div>` : ''}
-  </div><div class="card flat"><div class="row"><b class="grow">เช็กลิสต์ไปต่างประเทศครั้งแรก</b><b class="num">${done}/${items.length}</b></div><div class="bar mt-s"><i style="width:${pct(done, items.length)}%"></i></div></div>`;
+  </div>${entryHtml(t)}<div class="card flat"><div class="row"><b class="grow">เช็กลิสต์ไปต่างประเทศครั้งแรก</b><b class="num">${done}/${items.length}</b></div><div class="bar mt-s"><i style="width:${pct(done, items.length)}%"></i></div></div>`;
   for (const [g, G] of Object.entries(TIP_GROUPS)) {
     const list = items.filter(x => x.g === g), d = list.filter(x => t.tipsDone[x.id]).length; if (!list.length) continue;
     h += `<div class="card"><div class="ch"><h2>${G.i} ${G.n}</h2><span class="muted small num">${d}/${list.length}</span></div>
