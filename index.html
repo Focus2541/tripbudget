@@ -200,7 +200,7 @@ table.t td{padding:9px 6px;border-bottom:1px solid var(--line)}table.t td.num{wh
     <button data-act="exportData">💾 สำรองข้อมูล (.json)</button>
     <button data-act="importData">📂 กู้คืนข้อมูล</button>
     <button data-act="install" id="installBtn" hidden>📲 ติดตั้งเป็นแอป</button>
-    <div class="ft">ข้อมูลเก็บในเครื่องนี้เท่านั้น · v4.3</div>
+    <div class="ft">ข้อมูลเก็บในเครื่องนี้เท่านั้น · v4.4</div>
   </div>
   <input type="file" id="importFile" accept=".json,application/json" hidden>
 </header>
@@ -934,6 +934,76 @@ const ENTRY = {
     {n:'NZ Visitor Visa', d:'ยื่นออนไลน์', u:'https://www.immigration.govt.nz'},
     {n:'NZ Traveller Declaration', d:'แบบสำแดงเข้าประเทศออนไลน์ ฟรี กรอกก่อนบิน', u:'https://www.travellerdeclaration.govt.nz'}]}
 };
+/* กฎ/ข้อห้ามที่นักท่องเที่ยวไทยควรรู้ (ข้อมูลทั่วไป ณ ต.ค. 2026) */
+const RULES = {
+  JP:[['💊','ยาแก้หวัดคัดจมูกบางชนิด (มีซูโดอีเฟดรีน) ห้ามนำเข้า ยาประจำตัวพกได้ประมาณ 1 เดือน ถ้ามากกว่านั้นต้องขออนุญาตล่วงหน้า'],['🛂','ชาวต่างชาติต้องพกพาสปอร์ตตัวจริงติดตัวตลอดเวลา'],['🚭','สูบบุหรี่ได้เฉพาะจุดที่กำหนด ห้ามสูบขณะเดิน'],['🚃','บนรถไฟไม่คุยโทรศัพท์ ตั้งมือถือเป็นโหมดเงียบ'],['🗑️','ถังขยะสาธารณะมีน้อย พกถุงใส่ขยะกลับไปทิ้งเอง'],['💴','ไม่ต้องให้ทิป']],
+  KR:[['🥩','ห้ามนำเนื้อสัตว์และผลิตภัณฑ์จากเนื้อเข้าประเทศ (รวมหมูแผ่น กุนเชียง ไส้กรอก) ฝ่าฝืนปรับหนัก'],['🗺️','Google Maps นำทางในเกาหลีได้ไม่ดี ใช้ Naver Map หรือ KakaoMap แทน'],['🚭','ห้ามสูบบุหรี่ในที่สาธารณะส่วนใหญ่ รวมป้ายรถเมล์'],['💴','ไม่ต้องให้ทิป']],
+  CN:[['📵','Google, LINE, Facebook, Instagram ใช้ผ่านเน็ตจีนไม่ได้ ถ้าใช้ eSIM หรือโรมมิ่งของต่างประเทศจะใช้ได้ ส่งข้อความหาที่บ้านให้เตรียมไว้ก่อน'],['💳','ร้านส่วนใหญ่ใช้ Alipay หรือ WeChat Pay ผูกบัตรต่างประเทศได้ ตั้งค่าก่อนไปและพกเงินสดสำรอง'],['🛂','พกพาสปอร์ตตลอด ใช้ทั้งซื้อตั๋วรถไฟ เข้าสถานที่ท่องเที่ยว และเช็กอินโรงแรม'],['📸','ห้ามบินโดรนในหลายพื้นที่ และห้ามถ่ายรูปสถานที่ทางทหาร']],
+  HK:[['🚭','ห้ามนำบุหรี่ไฟฟ้าและบุหรี่ให้ความร้อนเข้าฮ่องกง ยกเว้นต่อเครื่องโดยไม่ออกจากสนามบิน'],['🚬','บุหรี่ธรรมดานำเข้าแบบไม่เสียภาษีได้ 19 มวน'],['🚇','ห้ามกินดื่มบนรถไฟฟ้า MTR มีค่าปรับ'],['🚯','ทิ้งขยะและสูบบุหรี่ในที่ห้ามมีค่าปรับ']],
+  TW:[['🥩','ห้ามนำเนื้อหมูและผลิตภัณฑ์เนื้อสัตว์เข้า (รวมขนมที่มีหมูหยอง) ครั้งแรกปรับ 200,000 ดอลลาร์ไต้หวัน'],['🚭','บุหรี่ไฟฟ้าผิดกฎหมาย ห้ามนำเข้า'],['🚇','ห้ามกินดื่มในเขตรถไฟฟ้า MRT รวมน้ำเปล่าและหมากฝรั่ง มีค่าปรับ']],
+  SG:[['🚭','บุหรี่ไฟฟ้าผิดกฎหมาย แค่มีไว้ครอบครองก็ถูกปรับ ชาวต่างชาติอาจถูกเนรเทศ'],['🍬','ห้ามนำหมากฝรั่งเข้าประเทศ'],['🚬','บุหรี่ไม่มีโควตายกเว้นภาษี ต้องสำแดงและเสียภาษีทุกซอง'],['🚇','ห้ามกินดื่มบน MRT และห้ามนำทุเรียนขึ้นรถสาธารณะ'],['🚯','ทิ้งขยะ ถ่มน้ำลาย ข้ามถนนนอกทางม้าลาย มีค่าปรับ']],
+  MY:[['💊','ยาเสพติดมีโทษรุนแรงมาก'],['🕌','เข้ามัสยิดแต่งกายมิดชิด คลุมแขนขา ผู้หญิงคลุมผม (มัสยิดใหญ่มีชุดให้ยืม)'],['💳','บัตร Touch \'n Go ใช้จ่ายรถไฟฟ้า รถบัส และทางด่วน']],
+  VN:[['💵','ธนบัตรดองหลักหมื่นกับหลักแสนสีคล้ายกัน นับให้ดีตอนจ่ายและรับเงินทอน'],['🛵','ข้ามถนนให้เดินช้าและสม่ำเสมอ มอเตอร์ไซค์จะหลบเอง อย่าวิ่งหรือหยุดกะทันหัน'],['🛂','โรงแรมจะขอพาสปอร์ตเพื่อแจ้งที่พักกับตำรวจ เป็นเรื่องปกติ']],
+  ID:[['🛕','บาหลี: เข้าวัดต้องนุ่งโสร่งและคาดเอว เคารพสถานที่ศักดิ์สิทธิ์ ห้ามปีนต้นไม้หรือรูปปั้นในวัด'],['💊','ยาเสพติดมีโทษรุนแรงถึงประหารชีวิต'],['🚕','เรียกรถผ่าน Grab หรือ Gojek จะได้ราคาแน่นอน']],
+  PH:[['🚭','ห้ามสูบบุหรี่ในที่สาธารณะทั่วประเทศ'],['💊','ยาเสพติดมีโทษรุนแรง'],['🛺','ตกลงราคาก่อนขึ้นรถสามล้อหรือแท็กซี่ หรือใช้ Grab']],
+  LA:[['🛕','แต่งกายสุภาพเข้าวัด ตักบาตรที่หลวงพระบางให้เงียบและไม่ใช้แฟลช'],['💵','ใช้เงินกีบเป็นหลัก หลายร้านรับเงินบาทแต่ทอนเป็นกีบ'],['🚆','รถไฟลาว-จีนต้องใช้พาสปอร์ตซื้อตั๋ว ช่วงเทศกาลตั๋วหมดเร็ว']],
+  KH:[['💵','ใช้ดอลลาร์สหรัฐได้ทั่วไป แต่ธนบัตรต้องไม่ขาด เงินทอนน้อยๆ มักเป็นเรียล'],['🛕','นครวัด: แต่งกายคลุมไหล่และเข่า และต้องซื้อบัตร Angkor Pass']],
+  MM:[['⚠️','เช็กประกาศความปลอดภัยของกระทรวงการต่างประเทศก่อนเดินทาง บางพื้นที่มีสถานการณ์ไม่สงบ'],['🛕','ถอดรองเท้าและถุงเท้าก่อนเข้าเขตเจดีย์'],['💵','ถ้าพกดอลลาร์ ใช้ธนบัตรใหม่ ไม่ยับ ไม่มีรอยเขียน']],
+  IN:[['🚭','บุหรี่ไฟฟ้าผิดกฎหมาย'],['🛕','ถอดรองเท้าก่อนเข้าวัดและศาสนสถาน แต่งกายมิดชิด'],['🥤','ดื่มน้ำบรรจุขวดเท่านั้น ระวังน้ำแข็งและผักสด']],
+  AE:[['💊','ยาบางชนิด เช่น ที่มีโคเดอีน ต้องขออนุญาตก่อนนำเข้า พกใบสั่งแพทย์ติดตัว'],['👗','แต่งกายสุภาพในที่สาธารณะ ห้ามแสดงความรักในที่สาธารณะ'],['🌙','ช่วงรอมฎอน ห้ามกินดื่มในที่สาธารณะตอนกลางวัน'],['📸','ห้ามถ่ายรูปคนอื่นโดยไม่ได้รับอนุญาต']],
+  GB:[['🥩','ห้ามนำเนื้อสัตว์และผลิตภัณฑ์นมเข้าประเทศ'],['💷','ร้านอาหารมักรวม service charge 10–12.5% ในบิล เช็กก่อนให้ทิปซ้ำ'],['🚇','รถไฟใต้ดินลอนดอนแตะบัตรเครดิตแบบ contactless ได้เลย']],
+  EU:[['🥩','ห้ามนำเนื้อสัตว์และผลิตภัณฑ์นมจากนอก EU เข้า'],['👜','ระวังมิจฉาชีพล้วงกระเป๋าตามจุดท่องเที่ยวและรถไฟฟ้า'],['🎫','ตั๋วรถไฟบางประเทศต้องประทับเวลาก่อนขึ้น (validate) ไม่งั้นโดนปรับ'],['💶','ร้านอาหารส่วนใหญ่รวมค่าบริการแล้ว ทิปเพิ่มหรือไม่ก็ได้']],
+  CH:[['💶','ใช้ฟรังก์สวิส บางที่รับยูโรแต่ทอนเป็นฟรังก์'],['🥩','ห้ามนำเนื้อสัตว์และผลิตภัณฑ์นมจากนอก EU เข้า'],['🛣️','ขับรถบนทางด่วนต้องมีสติกเกอร์ vignette'],['🔇','วันอาทิตย์ร้านค้าส่วนใหญ่ปิด']],
+  US:[['🍎','ต้องสำแดงอาหาร ผลไม้ และเนื้อสัตว์ ถ้าไม่สำแดงโดนปรับ'],['💵','ทิปร้านอาหาร 15–20% และให้ทิปแท็กซี่ ช่างทำผม คนยกกระเป๋าด้วย'],['💵','พกเงินสดเกิน 10,000 ดอลลาร์ต้องสำแดง'],['🍺','ดื่มแอลกอฮอล์ได้เมื่ออายุ 21 ปีขึ้นไป ร้านจะขอดูบัตร']],
+  CA:[['🍎','ต้องสำแดงอาหารทุกชนิด'],['💵','ทิปร้านอาหาร 15–20%'],['💵','พกเงินสดตั้งแต่ 10,000 ดอลลาร์แคนาดาต้องสำแดง']],
+  AU:[['🍎','กฎกักกันเข้มงวดมาก ต้องสำแดงอาหาร ยา เมล็ดพันธุ์ และของที่ทำจากไม้ ถ้าไม่สำแดงอาจโดนปรับหนักหรือยกเลิกวีซ่า'],['🚭','บุหรี่ไฟฟ้ามีข้อจำกัดเข้ม เช็กก่อนพกไป'],['☀️','แดดแรงมาก ทาครีมกันแดดและใส่หมวก']],
+  NZ:[['🍎','กฎกักกันเข้มงวด ไม่สำแดงอาหารโดนปรับทันที 400 ดอลลาร์นิวซีแลนด์'],['🥾','ทำความสะอาดรองเท้าเดินป่าก่อนไป อาจถูกตรวจดิน']]
+};
+/* เว็บ/แอปจองที่พักและเดินทาง */
+const HOTEL_SITES = [['Agoda','https://www.agoda.com','มีโรงแรมในเอเชียเยอะ จ่ายเป็นบาทได้'],['Booking.com','https://www.booking.com','หลายที่ยกเลิกฟรีได้ เหมาะกับยุโรป'],['Trip.com','https://www.trip.com','ที่พัก ตั๋วรถไฟ ตั๋วเครื่องบิน แข็งในจีน'],['Airbnb','https://www.airbnb.com','บ้านและห้องพักรายวัน เหมาะกับไปเป็นกลุ่ม']];
+const TICKET_SITES = [['Klook','https://www.klook.com','บัตรรถไฟ รถรับส่งสนามบิน บัตรเข้าสถานที่'],['KKday','https://www.kkday.com','ทัวร์ บัตรเข้าสถานที่ รถรับส่ง']];
+const TRAVEL = {
+  TH:{go:[['D-Ticket (รถไฟไทย)','https://dticket.railway.co.th','จองตั๋วรถไฟการรถไฟฯ'],['12Go','https://12go.asia','รถทัวร์ รถตู้ เรือ รถไฟ']], local:['Grab','Bolt','LINE MAN']},
+  JP:{go:[['Smart EX (ชินคันเซ็น)','https://smart-ex.jp/en/','จองชินคันเซ็นสาย Tokaido/Sanyo/Kyushu'],['Japan Bus Online','https://japanbusonline.com/en','รถบัสระหว่างเมือง รถบัสกลางคืน'],['Willer Express','https://willerexpress.com/en/','รถบัสกลางคืนราคาประหยัด']], local:['Google Maps (ใช้ได้ดีมาก)','บัตร Suica / PASMO','GO (เรียกแท็กซี่)']},
+  KR:{go:[['Korail','https://www.letskorail.com','รถไฟ KTX'],['Kobus','https://www.kobus.co.kr','รถบัสด่วนระหว่างเมือง']], local:['Naver Map','KakaoMap','Kakao T (แท็กซี่)','บัตร T-money']},
+  CN:{go:[['Trip.com','https://www.trip.com','ตั๋วรถไฟความเร็วสูง ภาษาอังกฤษ'],['12306','https://www.12306.cn','เว็บรถไฟจีนทางการ']], local:['Amap (高德地图)','DiDi','Alipay / WeChat Pay']},
+  HK:{go:[['MTR','https://www.mtr.com.hk','รถไฟฟ้าและ Airport Express']], local:['บัตร Octopus','Citymapper','Uber']},
+  TW:{go:[['THSR (รถไฟความเร็วสูง)','https://www.thsrc.com.tw','จองที่นั่งรถไฟความเร็วสูง'],['TRA (รถไฟไต้หวัน)','https://tip.railway.gov.tw','รถไฟสายปกติ']], local:['บัตร EasyCard','Google Maps','Uber']},
+  SG:{go:[['Easybook','https://www.easybook.com','รถบัสไปมาเลเซีย']], local:['Grab','แตะบัตรเครดิต contactless ขึ้น MRT/รถเมล์','Google Maps']},
+  MY:{go:[['Easybook','https://www.easybook.com','รถบัสระหว่างเมือง'],['KTMB','https://www.ktmb.com.my','รถไฟ ETS']], local:['Grab','บัตร Touch \'n Go']},
+  VN:{go:[['12Go','https://12go.asia','รถบัส รถไฟ'],['Vexere','https://vexere.com','รถบัสระหว่างเมือง']], local:['Grab','Be','Xanh SM']},
+  ID:{go:[['Traveloka','https://www.traveloka.com','ที่พัก รถไฟ เครื่องบินในประเทศ'],['12Go','https://12go.asia','รถบัส เรือข้ามเกาะ']], local:['Grab','Gojek']},
+  PH:{go:[['12Go','https://12go.asia','รถบัส เรือข้ามเกาะ']], local:['Grab']},
+  LA:{go:[['12Go','https://12go.asia','รถบัส รถตู้'],['LCR Ticket (แอป)','','ตั๋วรถไฟลาว-จีน']], local:['LOCA (เรียกรถ)']},
+  KH:{go:[['Giant Ibis','https://www.giantibis.com','รถบัสระหว่างเมือง'],['12Go','https://12go.asia','รถบัส เรือ']], local:['Grab','PassApp']},
+  MM:{go:[['12Go','https://12go.asia','รถบัสระหว่างเมือง']], local:['Grab']},
+  IN:{go:[['IRCTC','https://www.irctc.co.in','รถไฟอินเดีย'],['redBus','https://www.redbus.in','รถบัสระหว่างเมือง']], local:['Uber','Ola']},
+  AE:{go:[['RTA Dubai','https://www.rta.ae','รถไฟฟ้า รถบัส บัตร Nol']], local:['Careem','Uber']},
+  GB:{go:[['Trainline','https://www.thetrainline.com','ตั๋วรถไฟ'],['National Express','https://www.nationalexpress.com','รถโค้ชระหว่างเมือง']], local:['Citymapper','Uber','แตะบัตร contactless']},
+  EU:{go:[['Omio','https://www.omio.com','รวมรถไฟ รถบัส เครื่องบิน'],['FlixBus','https://www.flixbus.com','รถบัสข้ามประเทศราคาถูก'],['Trainline','https://www.thetrainline.com','ตั๋วรถไฟ']], local:['Uber','Bolt','Citymapper']},
+  CH:{go:[['SBB','https://www.sbb.ch','รถไฟสวิส และ Swiss Travel Pass']], local:['แอป SBB Mobile']},
+  US:{go:[['Amtrak','https://www.amtrak.com','รถไฟ'],['Greyhound','https://www.greyhound.com','รถบัสระหว่างเมือง'],['FlixBus','https://www.flixbus.com','รถบัสราคาถูก']], local:['Uber','Lyft']},
+  CA:{go:[['VIA Rail','https://www.viarail.ca','รถไฟ'],['FlixBus','https://www.flixbus.com','รถบัส']], local:['Uber']},
+  AU:{go:[['Greyhound Australia','https://www.greyhound.com.au','รถบัสระหว่างเมือง']], local:['Uber','DiDi','แตะบัตร contactless ขึ้นรถสาธารณะ']},
+  NZ:{go:[['InterCity','https://www.intercity.co.nz','รถบัสระหว่างเมือง']], local:['Uber']}
+};
+function rulesHtml(t){
+  const r = RULES[t.country]; if (!r) return '';
+  return `<div class="card"><div class="ch"><h2>⚖️ กฎและข้อห้ามใน${esc((country(t) || {}).n || '')}</h2></div>
+    ${r.map(([i, x]) => `<div class="fact" style="grid-template-columns:28px 1fr"><span class="ic">${i}</span><span class="small" style="color:var(--ink)">${esc(x)}</span></div>`).join('')}
+    <div class="muted small mt-s">ข้อมูลทั่วไป ณ ${ENTRY_AS_OF} กฎหมายเปลี่ยนได้ เช็กกับสถานทูตหรือเว็บทางการอีกครั้ง</div></div>`;
+}
+function bookingHtml(t){
+  const tr = TRAVEL[t.country] || {go:[['12Go','https://12go.asia','รถบัส รถไฟ เรือในเอเชีย'],['Omio','https://www.omio.com','รถไฟและรถบัสในยุโรป']], local:['Uber','Grab (เอเชียตะวันออกเฉียงใต้)']};
+  const link = ([n, u, d]) => `<div class="fact" style="grid-template-columns:1fr auto;align-items:center"><span><b style="display:block">${esc(n)}</b><span class="muted small">${esc(d)}</span></span>
+    ${u ? `<a class="btn ghost sm" href="${u}" target="_blank" rel="noopener" style="text-decoration:none">เปิด ↗</a>` : '<span class="muted small">ค้นใน Play Store</span>'}</div>`;
+  return `<div class="card"><div class="ch"><h2>🧭 จองที่พักและเดินทาง</h2></div>
+    <div class="muted small" style="font-weight:700;margin-top:2px">🏨 จองที่พัก</div>${HOTEL_SITES.map(link).join('')}
+    <div class="muted small" style="font-weight:700;margin-top:12px">🚌 รถบัส / รถไฟระหว่างเมือง</div>${tr.go.map(link).join('')}
+    ${isAbroad(t) ? `<div class="muted small" style="font-weight:700;margin-top:12px">🎟️ บัตรรถไฟ รถรับส่ง บัตรเข้าสถานที่</div>${TICKET_SITES.map(link).join('')}` : ''}
+    <div class="muted small" style="font-weight:700;margin-top:12px">📱 แอปเดินทางในเมือง</div><div class="chips mt-s">${tr.local.map(x => `<span class="tag">${esc(x)}</span>`).join('')}</div>
+    <div class="muted small mt-s">เทียบราคาหลายเว็บก่อนจอง และเช็กเงื่อนไขยกเลิก ลิงก์ทั้งหมดไม่ใช่โฆษณา</div></div>`;
+}
 function entryHtml(t){
   const e = ENTRY[t.country]; if (!e) return '';
   const c = country(t) || {}, s = t.startDate;
@@ -953,8 +1023,8 @@ const TIP_GROUPS = {doc:{n:'เอกสาร/วีซ่า',i:'📄'}, money
   ap_before:{n:'ก่อนวันเดินทาง',i:'📅',ap:true}, ap_bag:{n:'กฎจัดกระเป๋า',i:'🧳',ap:true}, ap_dep:{n:'วันเดินทาง: ทำตามลำดับ',i:'🛫',ap:true,seq:true}, ap_arr:{n:'ถึงปลายทาง: ทำตามลำดับ',i:'🛬',ap:true,seq:true}};
 function vTips(){
   const t = cur(); if (!t) return needTrip();
-  if (!isAbroad(t)) return passHtml(t) + `<div class="empty"><div class="e">💡</div><b>เคล็ดลับนี้สำหรับทริปต่างประเทศ</b>
-    <p>ถ้าทริปนี้ไปต่างประเทศ ให้เลือกประเทศปลายทางในหน้าแก้ไขทริป เคล็ดลับจะขึ้นอัตโนมัติ</p><button class="btn ghost" data-act="editTrip">แก้ไขทริป</button></div>`;
+  if (!isAbroad(t)) return passHtml(t) + bookingHtml(t) + `<div class="empty" style="padding:24px 16px"><div class="e">💡</div><b>เคล็ดลับต่างประเทศจะขึ้นเมื่อเลือกประเทศปลายทาง</b>
+    <p>ถ้าทริปนี้ไปต่างประเทศ ให้เลือกประเทศในหน้าแก้ไขทริป จะได้เอกสารเข้าประเทศ กฎของประเทศ และขั้นตอนสนามบิน</p><button class="btn ghost" data-act="editTrip">แก้ไขทริป</button></div>`;
   const c = country(t) || {}, pi = plugInfo(c), apTab = ui.tipTab === 'airport';
   const items = tipItems(t).filter(x => !!(TIP_GROUPS[x.g] || {}).ap === apTab), done = items.filter(x => t.tipsDone[x.id]).length;
   let h = passHtml(t) + `<div class="seg" style="margin-bottom:12px"><button class="${!apTab ? 'on' : ''}" data-act="tipTab" data-k="check">📋 เช็กลิสต์</button><button class="${apTab ? 'on' : ''}" data-act="tipTab" data-k="airport">✈️ สนามบินครั้งแรก</button></div>`;
@@ -964,7 +1034,7 @@ function vTips(){
     <div class="fact"><span class="ic">💱</span><b>${esc(t.currency || '-')} ${CURR[t.currency] ? '· ' + CURR[t.currency].n : ''}</b><span class="muted small">1 ${t.currency} = ${fmtRate(t.rate)} บาท · 1,000 บาท ≈ ${money(1000 / (t.rate || 1), t.currency)}</span></div>
     ${pi ? `<div class="fact"><span class="ic">🔌</span><b>${pi.types}</b><span class="muted small">${pi.need}${pi.volt}</span></div>` : ''}
     ${c.e ? `<div class="fact"><span class="ic">🆘</span><b>เบอร์ฉุกเฉิน</b><div class="em"><a href="tel:${c.e[0]}">👮 ${c.e[0]}</a>${c.e[1] !== c.e[0] ? `<a href="tel:${c.e[1]}">🚑 ${c.e[1]}</a>` : `<span class="muted small" style="align-self:center">ตำรวจและรถพยาบาลเบอร์เดียวกัน</span>`}</div></div>` : ''}
-  </div>${entryHtml(t)}<div class="card flat"><div class="row"><b class="grow">เช็กลิสต์ไปต่างประเทศครั้งแรก</b><b class="num">${done}/${items.length}</b></div><div class="bar mt-s"><i style="width:${pct(done, items.length)}%"></i></div></div>`;
+  </div>${entryHtml(t)}${rulesHtml(t)}${bookingHtml(t)}<div class="card flat"><div class="row"><b class="grow">เช็กลิสต์ไปต่างประเทศครั้งแรก</b><b class="num">${done}/${items.length}</b></div><div class="bar mt-s"><i style="width:${pct(done, items.length)}%"></i></div></div>`;
   for (const [g, G] of Object.entries(TIP_GROUPS)) {
     const list = items.filter(x => x.g === g), d = list.filter(x => t.tipsDone[x.id]).length; if (!list.length) continue;
     h += `<div class="card"><div class="ch"><h2>${G.i} ${G.n}</h2><span class="muted small num">${d}/${list.length}</span></div>
