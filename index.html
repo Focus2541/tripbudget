@@ -214,7 +214,7 @@ table.t td{padding:9px 6px;border-bottom:1px solid var(--line)}table.t td.num{wh
     <button data-act="exportData">💾 สำรองข้อมูล (.json)</button>
     <button data-act="importData">📂 กู้คืนข้อมูล</button>
     <button data-act="install" id="installBtn" hidden>📲 ติดตั้งเป็นแอป</button>
-    <div class="ft" id="menuFt">ข้อมูลเก็บในเครื่องนี้เท่านั้น · v5.0</div>
+    <div class="ft" id="menuFt">ข้อมูลเก็บในเครื่องนี้เท่านั้น · v5.1</div>
   </div>
   <input type="file" id="importFile" accept=".json,application/json" hidden>
 </header>
@@ -510,7 +510,7 @@ function passHtml(t){
     <div class="code">${isAbroad(t) ? 'TH → ' + esc(code || '??') + ' · ' : ''}${TYPES[t.type].i} ${TYPES[t.type].n}</div>
     <div class="tn">${c ? c.f : '🌍'} ${esc(t.name || 'ทริปไม่มีชื่อ')}</div>
     <div class="muted">${t.startDate ? thDateY(t.startDate) + ' – ' + thDateY(endDate(t)) + ' · ' : ''}${days(t)} วัน</div>
-    <div class="facts">${isAbroad(t) ? `<span class="tag">💱 1 ${t.currency} = ${fmtRate(t.rate)} ฿</span>` : ''}${pi ? `<span class="tag">🔌 ${pi.types} · ${pi.short}</span>` : ''}</div>
+    <div class="facts">${isAbroad(t) ? `<span class="tag">💱 1 ${t.currency} = ${fmtRate(t.rate)} ฿</span>` : ''}${pi ? `<span class="tag">🔌 ${pi.types} · ${pi.short}</span>` : ''}${seasonChip(t)}</div>
   </div><div class="stub"><div class="big">${esc(cd.big)}</div><div class="lbl">${esc(cd.lbl)}</div></div></div>`;
 }
 function needTrip(){
@@ -610,7 +610,9 @@ function vPacking(){
   let h = passHtml(t) + remindersHtml(t, true) + `<div class="card"><div class="row"><h2 class="grow">เตรียมของ</h2><b class="num">${done}/${total}</b></div>
     <div class="bar good mt-s"><i style="width:${pct(done, total)}%"></i></div>
     ${done === total && total ? `<div class="alert good mt">✅ แพ็กครบแล้ว เดินทางปลอดภัยนะ</div>` : ''}
-    ${miss ? `<div class="alert info mt row"><span class="grow">มีของในเทมเพลตอีก ${miss} รายการที่ยังไม่อยู่ในลิสต์</span><button class="btn ghost sm" data-act="syncTpl">เพิ่มเข้า</button></div>` : ''}</div>
+    ${miss ? `<div class="alert info mt row"><span class="grow">มีของในเทมเพลตอีก ${miss} รายการที่ยังไม่อยู่ในลิสต์</span><button class="btn ghost sm" data-act="syncTpl">เพิ่มเข้า</button></div>` : ''}
+    ${(() => { const tm = tripMonths(t); if (!tm) return ''; const sl = seasonsFor(t, tm), sm = seasonMissing(t, sl); if (!sm.length) return '';
+      return `<div class="alert info mt row"><span class="grow">${sl[0].i} ช่วงที่ไป${esc((country(t) || {n:''}).n.split(' (')[0])}: ${esc(sl[0].t)} แนะนำพกเพิ่ม ${sm.length} รายการ</span><button class="btn ghost sm" data-act="addSeasonPack">เพิ่มเข้า</button></div>`; })()}</div>
   <div class="row" style="margin-bottom:6px"><div class="chips grow">
     <button class="chip ${ui.packFilter === 'todo' ? 'on' : ''}" data-act="packFilter" data-k="todo">ยังไม่ได้แพ็ก (${total - done})</button>
     <button class="chip ${ui.packFilter === 'all' ? 'on' : ''}" data-act="packFilter" data-k="all">ทั้งหมด</button>
@@ -931,7 +933,7 @@ const TIP_GROUPS = {doc:{n:'เอกสาร/วีซ่า',i:'📄'}, money
   ap_before:{n:'ก่อนวันเดินทาง',i:'📅',ap:true}, ap_bag:{n:'กฎจัดกระเป๋า',i:'🧳',ap:true}, ap_dep:{n:'วันเดินทาง: ทำตามลำดับ',i:'🛫',ap:true,seq:true}, ap_arr:{n:'ถึงปลายทาง: ทำตามลำดับ',i:'🛬',ap:true,seq:true}};
 function vTips(){
   const t = cur(); if (!t) return needTrip();
-  if (!isAbroad(t)) return passHtml(t) + bookingHtml(t) + `<div class="empty" style="padding:24px 16px"><div class="e">💡</div><b>เคล็ดลับต่างประเทศจะขึ้นเมื่อเลือกประเทศปลายทาง</b>
+  if (!isAbroad(t)) return passHtml(t) + seasonHtml(t) + bookingHtml(t) + `<div class="empty" style="padding:24px 16px"><div class="e">💡</div><b>เคล็ดลับต่างประเทศจะขึ้นเมื่อเลือกประเทศปลายทาง</b>
     <p>ถ้าทริปนี้ไปต่างประเทศ ให้เลือกประเทศในหน้าแก้ไขทริป จะได้เอกสารเข้าประเทศ กฎของประเทศ และขั้นตอนสนามบิน</p><button class="btn ghost" data-act="editTrip">แก้ไขทริป</button></div>`;
   const c = country(t) || {}, pi = plugInfo(c), apTab = ui.tipTab === 'airport';
   const items = tipItems(t).filter(x => !!(TIP_GROUPS[x.g] || {}).ap === apTab), done = items.filter(x => t.tipsDone[x.id]).length;
@@ -942,7 +944,7 @@ function vTips(){
     <div class="fact"><span class="ic">💱</span><b>${esc(t.currency || '-')} ${CURR[t.currency] ? '· ' + CURR[t.currency].n : ''}</b><span class="muted small">1 ${t.currency} = ${fmtRate(t.rate)} บาท · 1,000 บาท ≈ ${money(1000 / (t.rate || 1), t.currency)}</span></div>
     ${pi ? `<div class="fact"><span class="ic">🔌</span><b>${pi.types}</b><span class="muted small">${pi.need}${pi.volt}</span></div>` : ''}
     ${c.e ? `<div class="fact"><span class="ic">🆘</span><b>เบอร์ฉุกเฉิน</b><div class="em"><a href="tel:${c.e[0]}">👮 ${c.e[0]}</a>${c.e[1] !== c.e[0] ? `<a href="tel:${c.e[1]}">🚑 ${c.e[1]}</a>` : `<span class="muted small" style="align-self:center">ตำรวจและรถพยาบาลเบอร์เดียวกัน</span>`}</div></div>` : ''}
-  </div>${entryHtml(t)}${rulesHtml(t)}${bookingHtml(t)}<div class="card flat"><div class="row"><b class="grow">เช็กลิสต์ไปต่างประเทศครั้งแรก</b><b class="num">${done}/${items.length}</b></div><div class="bar mt-s"><i style="width:${pct(done, items.length)}%"></i></div></div>`;
+  </div>${seasonHtml(t)}${entryHtml(t)}${rulesHtml(t)}${bookingHtml(t)}<div class="card flat"><div class="row"><b class="grow">เช็กลิสต์ไปต่างประเทศครั้งแรก</b><b class="num">${done}/${items.length}</b></div><div class="bar mt-s"><i style="width:${pct(done, items.length)}%"></i></div></div>`;
   for (const [g, G] of Object.entries(TIP_GROUPS)) {
     const list = items.filter(x => x.g === g), d = list.filter(x => t.tipsDone[x.id]).length; if (!list.length) continue;
     h += `<div class="card"><div class="ch"><h2>${G.i} ${G.n}</h2><span class="muted small num">${d}/${list.length}</span></div>
@@ -968,6 +970,41 @@ function vTemplates(){
     <label class="tog"><input type="checkbox" data-tf="buy" ${it.buy ? 'checked' : ''}>🛒 ต้องซื้อ</label></div></div>`).join('') || '<div class="empty">ยังไม่มีของในกลุ่มนี้</div>'}</div>
   <div class="row wrap mt"><button class="btn pri" data-act="addTpl">+ เพิ่มของ</button><span class="grow"></span>
     <button class="btn ghost" data-act="resetTpl" data-k="${g}">รีเซ็ตกลุ่มนี้</button><button class="btn danger" data-act="resetTpl" data-k="all">รีเซ็ตทั้งหมด</button></div>`;
+}
+
+/* ============ SEASONS ============ */
+const TH_MONTHS = ['ม.ค.','ก.พ.','มี.ค.','เม.ย.','พ.ค.','มิ.ย.','ก.ค.','ส.ค.','ก.ย.','ต.ค.','พ.ย.','ธ.ค.'];
+function tripMonths(t){
+  if (!t.startDate) return null;
+  const out = [], d = new Date(t.startDate + 'T00:00'), e = new Date(endDate(t) + 'T00:00');
+  while (d <= e) { const m = d.getMonth() + 1; if (!out.includes(m)) out.push(m); d.setDate(d.getDate() + 1); }
+  return out;
+}
+function seasonsFor(t, months){ return (SEASONS[t.country] || []).filter(x => x.m.some(m => months.includes(m))); }
+function seasonMissing(t, list){
+  const have = new Set(t.packing.map(p => p.name.trim())), out = [];
+  list.forEach(x => x.pack.forEach(([n, c]) => { if (!have.has(n) && !out.some(o => o[0] === n)) out.push([n, c]); }));
+  return out;
+}
+function seasonHtml(t){
+  const all = SEASONS[t.country]; if (!all) return '';
+  const tm = tripMonths(t), months = tm || [ui.seasonMonth || (new Date().getMonth() + 1)];
+  const list = seasonsFor(t, months), miss = seasonMissing(t, list), c = country(t) || {};
+  const mLabel = ms => ms.length === 12 ? 'ทั้งปี' : ms.map(m => TH_MONTHS[m - 1]).join(' ');
+  let h = `<div class="card"><div class="ch"><h2>🌤️ อากาศ${esc(c.n ? 'ที่' + c.n.split(' (')[0] : '')} ${tm ? 'ช่วงที่ไป' : ''}</h2><span class="muted small">${mLabel(months)}</span></div>`;
+  if (!tm) h += `<div class="muted small" style="margin-bottom:8px">ยังไม่ได้ใส่วันเดินทาง เลือกเดือนเพื่อดูอากาศ</div><div class="scrollx" style="margin-bottom:10px"><div class="chips">${TH_MONTHS.map((n, i) => `<button class="chip ${months[0] === i + 1 ? 'on' : ''}" data-act="seasonMonth" data-m="${i + 1}">${n}</button>`).join('')}</div></div>`;
+  h += list.map(x => `<div class="fact"><span class="ic">${x.i}</span><b>${esc(x.t)} <span class="muted small num" style="font-weight:500">${esc(x.temp)}</span></b><span class="small" style="color:var(--ink2)">${esc(x.d)}</span></div>`).join('');
+  if (miss.length) h += `<div class="alert info mt"><b>ของที่ควรพกช่วงนี้</b><div class="chips mt-s">${miss.map(([n]) => `<span class="tag">${esc(n)}</span>`).join('')}</div>
+    <button class="btn ghost sm mt-s" data-act="addSeasonPack">+ เพิ่ม ${miss.length} รายการเข้าลิสต์เตรียมของ</button></div>`;
+  else if (list.some(x => x.pack.length)) h += `<div class="muted small mt-s">✓ ของที่แนะนำสำหรับช่วงนี้อยู่ในลิสต์เตรียมของแล้ว</div>`;
+  h += `<details class="mt"><summary class="small" style="cursor:pointer;color:var(--acc-ink);font-weight:600">ดูทั้งปี</summary>
+    ${all.map(x => `<div class="row small" style="padding:6px 0;border-bottom:1px solid var(--line);align-items:flex-start"><span style="width:96px;flex-shrink:0;color:var(--ink3)">${mLabel(x.m)}</span><span class="grow">${x.i} ${esc(x.t)} <span class="muted num">${esc(x.temp)}</span></span></div>`).join('')}</details>
+    <div class="muted small mt-s">ค่าเฉลี่ยโดยประมาณ ประเทศใหญ่ใช้เมืองหลักเป็นตัวอย่าง เช็กพยากรณ์อากาศจริงก่อนเดินทาง 3–5 วัน</div></div>`;
+  return h;
+}
+function seasonChip(t){
+  const tm = tripMonths(t); if (!tm) return ''; const x = seasonsFor(t, tm)[0];
+  return x ? `<span class="tag">${x.i} ${esc(x.t)}</span>` : '';
 }
 
 /* ============ REMINDERS ============ */
@@ -1235,7 +1272,7 @@ function render(){
   $$('.nav button').forEach(b => b.classList.toggle('on', b.dataset.v === navKey));
   const t = cur(); $('#topTrip').textContent = t && v !== 'trips' ? ((country(t) || {f:'🌍'}).f + ' ' + (t.name || 'ทริปไม่มีชื่อ')) : '';
   $('[data-act="editTrip"]', $('#menu')).hidden = !t; $('#shareBtn').hidden = !t; $('#sosBtn').hidden = !t || v === 'sos';
-  $('#menuFt').textContent = 'ข้อมูลเก็บในเครื่องนี้เท่านั้น · v5.0' + (db.lastBackup ? ' · สำรองล่าสุด ' + ago(db.lastBackup) : ' · ยังไม่เคยสำรอง');
+  $('#menuFt').textContent = 'ข้อมูลเก็บในเครื่องนี้เท่านั้น · v5.1' + (db.lastBackup ? ' · สำรองล่าสุด ' + ago(db.lastBackup) : ' · ยังไม่เคยสำรอง');
   hydrate($('#view'));
 }
 let prevView = 'trips';
@@ -1353,6 +1390,10 @@ const A = {
     const d = tplWithIds(DEFAULT_TPL()); if (k === 'all') db.templates = d; else db.templates[k] = d[k]; save(); render(); toast('รีเซ็ตแล้ว'); },
   exportData(){ closeMenu(); exportData(); },
   importData(){ closeMenu(); $('#importFile').click(); },
+  seasonMonth(el){ ui.seasonMonth = +el.dataset.m; render(); },
+  addSeasonPack(){ const t = cur(), tm = tripMonths(t) || [ui.seasonMonth || (new Date().getMonth() + 1)], miss = seasonMissing(t, seasonsFor(t, tm));
+    miss.forEach(([name, cat]) => t.packing.push({id:uid(), name, cat:PACK_CATS[cat] ? cat : 'other', qty:1, perDay:false, buy:'', key:'', checked:false, expId:''}));
+    save(); render(); toast(`เพิ่ม ${miss.length} รายการเข้าลิสต์เตรียมของแล้ว`); },
   remDone(el){ const t = cur(); t.remDone[el.dataset.id] = true; save(); render(); toast('ทำแล้ว ✓'); },
   async askNotify(){ try { const r = await Notification.requestPermission(); if (r === 'granted') { toast('เปิดแจ้งเตือนแล้ว'); notifyDue(); } else toast('ไม่ได้เปิดแจ้งเตือน', 'warn'); } catch {} render(); },
   addPlan(el){ planSheet(cur(), null, +el.dataset.d || 1); },
