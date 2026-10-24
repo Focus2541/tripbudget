@@ -214,7 +214,7 @@ table.t td{padding:9px 6px;border-bottom:1px solid var(--line)}table.t td.num{wh
     <button data-act="exportData">💾 สำรองข้อมูล (.json)</button>
     <button data-act="importData">📂 กู้คืนข้อมูล</button>
     <button data-act="install" id="installBtn" hidden>📲 ติดตั้งเป็นแอป</button>
-    <div class="ft" id="menuFt">ข้อมูลเก็บในเครื่องนี้เท่านั้น · v5.1</div>
+    <div class="ft" id="menuFt">ข้อมูลเก็บในเครื่องนี้เท่านั้น · v5.2</div>
   </div>
   <input type="file" id="importFile" accept=".json,application/json" hidden>
 </header>
@@ -938,6 +938,7 @@ function vTips(){
   const c = country(t) || {}, pi = plugInfo(c), apTab = ui.tipTab === 'airport';
   const items = tipItems(t).filter(x => !!(TIP_GROUPS[x.g] || {}).ap === apTab), done = items.filter(x => t.tipsDone[x.id]).length;
   let h = passHtml(t) + `<div class="seg" style="margin-bottom:12px"><button class="${!apTab ? 'on' : ''}" data-act="tipTab" data-k="check">📋 เช็กลิสต์</button><button class="${apTab ? 'on' : ''}" data-act="tipTab" data-k="airport">✈️ สนามบินครั้งแรก</button></div>`;
+  if (apTab) h += `<button class="card" data-act="go" data-v="imm" style="width:100%;text-align:left;display:flex;align-items:center;gap:12px;cursor:pointer;border-color:var(--acc)"><span style="font-size:28px">🛂</span><span class="grow"><b style="display:block">คุยกับ ตม. (ภาษายังไม่แข็งก็ได้)</b><span class="muted small">คำถามที่ ตม. มักถาม พร้อมคำตอบ คำอ่าน และเสียง</span></span><span class="muted">›</span></button>`;
   if (apTab) h += `<div class="card flat"><div class="row"><b class="grow">ขั้นตอนสนามบินครั้งแรก</b><b class="num">${done}/${items.length}</b></div><div class="bar mt-s"><i style="width:${pct(done, items.length)}%"></i></div>
     <div class="muted small mt-s">ติ๊กไปทีละขั้นได้ทั้งตอนเตรียมตัวและตอนอยู่ในสนามบิน</div></div>`;
   else h += `<div class="card"><div class="ch"><h2>ข้อมูลประเทศปลายทาง</h2></div>
@@ -1140,11 +1141,63 @@ function vSos(){
   if (t && (s.insurer || s.policy || s.insPhone)) h += `<div class="card"><div class="ch"><h2>🛡️ ประกันการเดินทาง</h2></div>${row('🏢', 'บริษัท', esc(s.insurer))}${row('#️⃣', 'เลขกรมธรรม์', esc(s.policy))}${row('☎️', 'สายด่วน 24 ชม.', tel(s.insPhone))}</div>`;
   if (t && s.embassy) h += `<div class="card"><div class="ch"><h2>🇹🇭 สถานทูต/กงสุลไทย</h2></div><div style="white-space:pre-wrap;word-break:break-word">${esc(s.embassy)}</div></div>`;
   if (t && s.note) h += `<div class="card"><div class="ch"><h2>📝 บันทึก</h2></div><div style="white-space:pre-wrap;word-break:break-word">${esc(s.note)}</div></div>`;
+  if (t && isAbroad(t)) h += `<button class="card" data-act="go" data-v="imm" style="width:100%;text-align:left;display:flex;align-items:center;gap:12px;cursor:pointer"><span style="font-size:24px">🛂</span><span class="grow"><b style="display:block">คุยกับ ตม.</b><span class="muted small">คำถาม-คำตอบสำหรับด่านตรวจคนเข้าเมือง</span></span><span class="muted">›</span></button>`;
   h += `<div class="card"><div class="ch"><h2>🗣️ ประโยคขอความช่วยเหลือ</h2></div><div class="muted small" style="margin-bottom:6px">แตะเพื่อแสดงตัวใหญ่ให้คนท้องถิ่นอ่าน</div>
     ${PHRASE_KEYS.map(([k, th]) => `<button class="tip" data-act="bigText" data-k="${k}"><span class="grow"><span class="muted small" style="display:block">${th}</span>
       <span class="tt" style="display:block;font-size:17px" lang="${lang}">${esc(L[k])}</span>${lang !== 'en' ? `<span class="td" style="display:block">${esc(PHRASES.en[k])}</span>` : ''}</span></button>`).join('')}</div>`;
   return h;
 }
+/* ============ VIEW: IMMIGRATION (คุยกับ ตม.) ============ */
+const enDate = s => s ? new Date(s + 'T00:00').toLocaleDateString('en-GB', {day:'numeric', month:'long', year:'numeric'}) : '';
+function immQs(t){
+  const p = db.profile, n = pax(t) - 1, d = days(t), s = t.sos || {};
+  const purpose = t.type === 'business' ? ['Business. I have a meeting here.', 'ธุระ/ทำงาน มีประชุมที่นี่'] : t.type === 'relative' ? ['I am visiting my relatives.', 'มาเยี่ยมญาติ'] : ['Sightseeing. I am here on holiday.', 'มาเที่ยว พักผ่อน'];
+  return [
+    {k:'purpose', q:'What is the purpose of your visit?', r:'วอท อีส เดอะ เพอร์โพส ออฟ ยัวร์ วิสิท', m:'มาทำอะไร / จุดประสงค์ที่มา', a:purpose[0], am:purpose[1]},
+    {k:'long', q:'How long will you stay?', r:'ฮาว ลอง วิล ยู สเตย์', m:'จะอยู่กี่วัน', a:`${d} day${d > 1 ? 's' : ''}.` + (t.startDate ? ` Until ${enDate(endDate(t))}.` : ''), am:`${d} วัน`},
+    {k:'stay', q:'Where will you stay?', r:'แวร์ วิล ยู สเตย์', m:'จะพักที่ไหน', a:s.hotel ? `At ${s.hotel}. Here is my booking.` : 'At a hotel. Here is my booking.', am:'พักที่โรงแรม นี่คือใบจอง' + (s.hotel ? '' : ' (ใส่ชื่อที่พักในการ์ดฉุกเฉินจะขึ้นชื่อให้)')},
+    {k:'return', q:'Do you have a return ticket? / When will you leave?', r:'ดู ยู แฮฟ อะ รีเทิร์น ทิกเก็ต / เวน วิล ยู ลีฟ', m:'มีตั๋วขากลับไหม / จะกลับวันไหน', a:t.startDate ? `Yes. I will go back to Thailand on ${enDate(endDate(t))}. Here is my ticket.` : 'Yes. Here is my return ticket.', am:'มีครับ/ค่ะ จะกลับไทยวันที่... นี่คือตั๋ว'},
+    {k:'job', q:'What do you do? / What is your job?', r:'วอท ดู ยู ดู / วอท อีส ยัวร์ จ็อบ', m:'ทำงานอะไร', a:p.job ? `I am a ${p.job}.` + (p.workplace ? ` I work at ${p.workplace} in Thailand.` : '') : 'I am a ______. (ใส่อาชีพในการ์ดฉุกเฉิน)', am:'บอกอาชีพ'},
+    {k:'alone', q:'Are you traveling alone?', r:'อาร์ ยู แทรฟเวลลิง อะโลน', m:'มาคนเดียวไหม', a:n > 0 ? `No, I am traveling with ${n} ${n > 1 ? 'friends' : 'friend'}.` : 'Yes, I am traveling alone.', am:n > 0 ? `ไม่ มากับเพื่อน ${n} คน` : 'ใช่ มาคนเดียว'},
+    {k:'first', q:'Is this your first visit?', r:'อีส ดิส ยัวร์ เฟิร์สท์ วิสิท', m:'มาครั้งแรกไหม', a:'Yes, this is my first time.', am:'ใช่ มาครั้งแรก (ถ้าเคยมาแล้ว: No, I have been here before.)'},
+    {k:'money', q:'How much money do you have?', r:'ฮาว มัช มันนี่ ดู ยู แฮฟ', m:'มีเงินมาเท่าไหร่', a:`I have some cash${t.currency && t.currency !== 'THB' ? ' in ' + t.currency : ''} and a credit card.`, am:'มีเงินสดและบัตรเครดิต'},
+    {k:'know', q:'Do you know anyone here?', r:'ดู ยู โนว เอนีวัน เฮียร์', m:'รู้จักใครที่นี่ไหม', a:t.type === 'relative' ? 'Yes, my relatives live here.' : 'No, I am here as a tourist.', am:t.type === 'relative' ? 'รู้จัก ญาติอยู่ที่นี่' : 'ไม่รู้จัก มาเที่ยว'},
+    {k:'declare', q:'Do you have anything to declare?', r:'ดู ยู แฮฟ เอนีธิง ทู ดิแคลร์', m:'มีของต้องสำแดงไหม (ศุลกากร)', a:'No, nothing to declare.', am:'ไม่มีของต้องสำแดง (ถ้ามีอาหารหรือของเกินกำหนด ให้ตอบตามจริง)'}
+  ].map(x => ({...x, a:(t.immAns || {})[x.k] || x.a, custom:!!(t.immAns || {})[x.k]}));
+}
+const IMM_HELP = [
+  ['Sorry, my English is not very good. Could you speak slowly, please?', 'ขอโทษ ภาษาอังกฤษไม่ค่อยเก่ง ช่วยพูดช้าๆ ได้ไหม'],
+  ['Could you repeat that, please?', 'ช่วยพูดอีกครั้งได้ไหม'],
+  ['Can I show you my documents?', 'ขอให้ดูเอกสารแทนได้ไหม'],
+  ['Could I have a Thai interpreter, please?', 'ขอล่ามภาษาไทยได้ไหม']
+];
+function vImm(){
+  const t = cur(); if (!t) return needTrip();
+  const qs = immQs(t), tts = 'speechSynthesis' in window;
+  let h = `<div class="hd"><div><h1>🛂 คุยกับ ตม.</h1><div class="muted">ซ้อมก่อนไป แล้วเปิดใช้ตอนต่อคิวได้แม้ไม่มีเน็ต</div></div><button class="btn ghost sm" data-act="go" data-v="tips">← เคล็ดลับ</button></div>
+  <div class="card flat"><b>ทริกตอบ ตม.</b><div class="small mt-s" style="color:var(--ink2)">• ตอบสั้นๆ ตรงคำถาม ไม่ต้องพูดยาว<br>• พูดความจริง และตอบให้ตรงกับที่กรอกในใบเข้าเมือง<br>• ถอดแว่นกันแดดและหมวก เตรียมพาสปอร์ต ตั๋วขากลับ ใบจองที่พักไว้ในมือ<br>• ฟังไม่ทัน ไม่ต้องเดา ขอให้พูดอีกครั้ง หรือยื่นเอกสารให้ดูแทน<br>• ไม่ล้อเล่นเรื่องระเบิด อาวุธ ยาเสพติด</div>
+  ${t.docs && t.docs.length ? `<button class="btn ghost sm mt" data-act="go" data-v="plan">📎 เปิดตั๋ว/ใบจองที่เก็บไว้</button>` : ''}</div>
+  <div class="card"><div class="ch"><h2>🙏 ประโยคช่วยเมื่อฟังไม่ทัน</h2></div>${IMM_HELP.map(([en, th], i) => `<div class="tip" style="cursor:default"><span class="grow"><span class="tt" style="display:block">${esc(en)}</span><span class="td" style="display:block">${esc(th)}</span>
+    <span class="row mt-s">${tts ? `<button class="btn ghost sm" data-act="say" data-t="${esc(en)}">🔊 ฟัง</button>` : ''}<button class="btn ghost sm" data-act="bigImm" data-i="h${i}">แสดงตัวใหญ่</button></span></span></div>`).join('')}</div>
+  <div class="row" style="margin:16px 2px 8px"><h2 class="grow">❓ คำถามที่ ตม. มักถาม</h2></div>
+  <div class="muted small" style="margin:0 2px 10px">คำตอบเติมจากข้อมูลทริปให้แล้ว (จำนวนวัน วันกลับ ที่พัก อาชีพ) แก้เองได้ทุกข้อ</div>`;
+  h += qs.map(x => `<div class="card"><div class="muted small">เขาถาม</div><b style="display:block;font-size:16px">${esc(x.q)}</b>
+    <div class="muted small">อ่านว่า: ${esc(x.r)} · แปลว่า: ${esc(x.m)}</div>
+    <div class="alert info mt" style="background:var(--acc-soft);color:var(--ink)"><div class="muted small">ตอบว่า</div><b style="display:block;font-size:17px;word-break:break-word">${esc(x.a)}</b><div class="small" style="color:var(--ink2)">${esc(x.am)}</div></div>
+    <div class="row wrap mt-s">${tts ? `<button class="btn ghost sm" data-act="say" data-t="${esc(x.q)}">🔊 คำถาม</button><button class="btn ghost sm" data-act="say" data-t="${esc(x.a)}">🔊 คำตอบ</button>` : ''}
+    <button class="btn ghost sm" data-act="bigImm" data-i="${x.k}">แสดงตัวใหญ่</button><button class="btn ghost sm" data-act="editImm" data-k="${x.k}">✏️ แก้คำตอบ</button></div></div>`).join('');
+  return h + `<div class="muted small" style="padding:0 4px">ถ้าไม่ได้ใส่ข้อมูลทริปครบ บางคำตอบจะมีช่องว่าง ให้ใส่อาชีพและที่พักในการ์ดฉุกเฉิน (ปุ่ม SOS) ก่อน</div>`;
+}
+function showBigText(main, sub){
+  const el = $('#big');
+  el.innerHTML = `<div class="bt" lang="en" style="white-space:pre-wrap">${esc(main)}</div>${sub ? `<div class="bs">${esc(sub)}</div>` : ''}<div class="bh">แตะเพื่อปิด</div>`;
+  el.hidden = false;
+}
+function say(text){
+  if (!('speechSynthesis' in window)) return;
+  speechSynthesis.cancel(); const u = new SpeechSynthesisUtterance(text); u.lang = 'en-US'; u.rate = .85; speechSynthesis.speak(u);
+}
+
 function showBig(k){
   const t = cur(), c = t ? (country(t) || {}) : {}, lang = c.lang || 'en', L = PHRASES[lang] || PHRASES.en, p = db.profile;
   let main = L[k] || '', sub = lang !== 'en' ? PHRASES.en[k] : '';
@@ -1161,6 +1214,7 @@ function sosSheet(){
   openSheet(`<div class="sh"><b>แก้ไขการ์ดฉุกเฉิน</b><button class="x" data-act="closeSheet" aria-label="ปิด">✕</button></div>
     <div class="stack"><div class="muted small" style="font-weight:700">👤 ข้อมูลของฉัน (ใช้ทุกทริป)</div>
     ${f('sName', 'ชื่อ-นามสกุล (ตามพาสปอร์ต)', p.name, 'SOMCHAI JAIDEE')}
+    <div class="g2">${f('sJob', 'อาชีพ (ภาษาอังกฤษ ใช้ตอบ ตม.)', p.job, 'dental assistant')}${f('sWork', 'ที่ทำงาน (ภาษาอังกฤษ)', p.workplace, 'a health center')}</div>
     <div class="g2">${f('sBlood', 'กรุ๊ปเลือด', p.blood, 'เช่น O')}${f('sMeds', 'ยาที่ใช้ประจำ', p.meds, 'ชื่อยาภาษาอังกฤษ')}</div>
     ${f('sAllergy', 'แพ้ยา/อาหาร (ภาษาอังกฤษ)', p.allergies, 'เช่น Penicillin, peanuts')}
     ${p.contacts.map((x, i) => `<div class="g2">${f('sCn' + i, 'ผู้ติดต่อ ' + (i + 1), x.name, 'ชื่อ / ความสัมพันธ์')}${f('sCp' + i, 'เบอร์', x.phone, '+66 8x xxx xxxx', 'tel')}</div>`).join('')}
@@ -1264,15 +1318,15 @@ async function importData(file){
 }
 
 /* ============ RENDER ============ */
-const VIEWS = {trips:vTrips, form:vForm, packing:vPacking, budget:vBudget, tips:vTips, templates:vTemplates, split:vSplit, compare:vCompare, plan:vPlan, sos:vSos};
+const VIEWS = {imm:vImm, trips:vTrips, form:vForm, packing:vPacking, budget:vBudget, tips:vTips, templates:vTemplates, split:vSplit, compare:vCompare, plan:vPlan, sos:vSos};
 function render(){
   const v = VIEWS[ui.view] ? ui.view : 'trips';
   $('#view').innerHTML = VIEWS[v]();
-  const navKey = {form:'trips', compare:'trips', templates:'packing', split:'budget'}[v] || v;
+  const navKey = {form:'trips', compare:'trips', templates:'packing', split:'budget', imm:'tips'}[v] || v;
   $$('.nav button').forEach(b => b.classList.toggle('on', b.dataset.v === navKey));
   const t = cur(); $('#topTrip').textContent = t && v !== 'trips' ? ((country(t) || {f:'🌍'}).f + ' ' + (t.name || 'ทริปไม่มีชื่อ')) : '';
   $('[data-act="editTrip"]', $('#menu')).hidden = !t; $('#shareBtn').hidden = !t; $('#sosBtn').hidden = !t || v === 'sos';
-  $('#menuFt').textContent = 'ข้อมูลเก็บในเครื่องนี้เท่านั้น · v5.1' + (db.lastBackup ? ' · สำรองล่าสุด ' + ago(db.lastBackup) : ' · ยังไม่เคยสำรอง');
+  $('#menuFt').textContent = 'ข้อมูลเก็บในเครื่องนี้เท่านั้น · v5.2' + (db.lastBackup ? ' · สำรองล่าสุด ' + ago(db.lastBackup) : ' · ยังไม่เคยสำรอง');
   hydrate($('#view'));
 }
 let prevView = 'trips';
@@ -1417,11 +1471,21 @@ const A = {
   openFile(el){ openFile(el.dataset.id); },
   editSos(){ sosSheet(); },
   saveSos(){ const p = db.profile, v = id => ($('#' + id) || {}).value || '';
-    Object.assign(p, {name:v('sName').trim(), blood:v('sBlood').trim(), meds:v('sMeds').trim(), allergies:v('sAllergy').trim()});
+    Object.assign(p, {job:v('sJob').trim(), workplace:v('sWork').trim(), name:v('sName').trim(), blood:v('sBlood').trim(), meds:v('sMeds').trim(), allergies:v('sAllergy').trim()});
     p.contacts = p.contacts.map((c, i) => ({name:v('sCn' + i).trim(), phone:v('sCp' + i).trim()}));
     const t = cur(); if (t) Object.assign(t.sos, {hotel:v('sHotel').trim(), hotelAddr:v('sAddr').trim(), hotelPhone:v('sHotelTel').trim(), insurer:v('sIns').trim(), policy:v('sPolicy').trim(), insPhone:v('sInsTel').trim(), embassy:v('sEmb').trim(), note:v('sNote').trim()});
     save(); closeSheet(); render(); toast('บันทึกการ์ดฉุกเฉินแล้ว'); },
   bigText(el){ showBig(el.dataset.k); },
+  say(el){ say(el.dataset.t); },
+  bigImm(el){ const i = el.dataset.i;
+    if (i[0] === 'h' && /^h\d$/.test(i)) { const [en, th] = IMM_HELP[+i.slice(1)]; showBigText(en, th); return; }
+    const x = immQs(cur()).find(q => q.k === i); if (x) showBigText(x.a, x.am); },
+  async editImm(el){ const t = cur(), k = el.dataset.k, x = immQs(t).find(q => q.k === k); if (!x) return;
+    const r = await dialog({title:'แก้คำตอบ', text:x.q, body:`<label class="f">คำตอบ (ภาษาอังกฤษ)<textarea name="a" rows="3" style="min-height:80px">${esc(x.a)}</textarea></label>
+      ${x.custom ? '<label class="tog mt-s"><input type="checkbox" name="reset">กลับไปใช้คำตอบอัตโนมัติ</label>' : ''}`, ok:'บันทึก'});
+    if (!r) return; t.immAns = t.immAns || {};
+    if (r.reset || !r.a.trim()) delete t.immAns[k]; else t.immAns[k] = r.a.trim();
+    save(); render(); toast('บันทึกคำตอบแล้ว'); },
   closeBig(){ $('#big').hidden = true; },
   shareTrip(){ closeMenu(); shareTrip(); },
   scanPick(el){ $('#eAmt').value = el.dataset.v; expPreview(); $$('#scanOut .chip').forEach(c => c.classList.toggle('on', c === el)); },
@@ -1513,7 +1577,7 @@ document.addEventListener('visibilitychange', () => { if (document.visibilitySta
   try { const d = JSON.parse(localStorage.getItem(KEY)); if (d && Array.isArray(d.trips)) db = d; } catch {}
   try { const r = JSON.parse(localStorage.getItem(RKEY)); if (r && r.rates) rates = {rates:r.rates, at:r.at || r.updated || null}; } catch {}
   if (!db.templates) db.templates = tplWithIds(DEFAULT_TPL());
-  db.profile = Object.assign({name:'', blood:'', allergies:'', meds:'', contacts:[{name:'', phone:''}, {name:'', phone:''}]}, db.profile || {});
+  db.profile = Object.assign({job:'', workplace:'', name:'', blood:'', allergies:'', meds:'', contacts:[{name:'', phone:''}, {name:'', phone:''}]}, db.profile || {});
   if (!Array.isArray(db.profile.contacts) || !db.profile.contacts.length) db.profile.contacts = [{name:'', phone:''}, {name:'', phone:''}];
   let migrated = 0;
   if (!localStorage.getItem(KEY)) {
