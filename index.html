@@ -1078,9 +1078,26 @@ async function notifyDue(){
 /* ============ VIEW: PLAN (แผนเที่ยว + ตั๋ว/ใบจอง) ============ */
 const DOC_KINDS = {flight:'✈️ ตั๋วเครื่องบิน', hotel:'🏨 ใบจองที่พัก', entry:'🛂 ใบเข้าเมือง / QR', insurance:'🛡️ กรมธรรม์ประกัน', ticket:'🎟️ ตั๋วรถไฟ/รถบัส/สถานที่', other:'📄 อื่นๆ'};
 const mapUrl = q => 'https://www.google.com/maps/search/?api=1&query=' + encodeURIComponent(q);
+/* การ์ด "รีวิวที่จดไว้" — อ่านจากแอป ที่นี่ดี (focus2541.github.io/thineedee) ซึ่งอยู่เว็บเดียวกัน จึงใช้ข้อมูลในเครื่องร่วมกันได้
+   อ่านอย่างเดียว ไม่แก้ข้อมูลของ ที่นี่ดี */
+const TND_URL = '../thineedee/';
+function reviewsCard(t){
+  let all = []; try { all = JSON.parse(localStorage.getItem('tnd_cache') || '[]') || []; } catch {}
+  const mine = all.filter(r => r && r.trip && r.trip.id === t.id);
+  const link = TND_URL + '?trip=' + encodeURIComponent(t.id);
+  if (!mine.length) return `<div class="card tight row" style="gap:10px"><span class="grow small">🔎 หารีวิวที่พัก ร้าน และที่เที่ยวสำหรับทริปนี้ จากแหล่งที่เชื่อได้</span>
+    <a class="btn ghost sm" href="${link}" style="text-decoration:none">เปิด ที่นี่ดี</a></div>`;
+  const TYPE = {stay:'🏨', food:'🍜', spot:'📍'};
+  const lines = [];
+  mine.forEach(r => (r.highlights || []).filter(x => x.text).forEach(x => lines.push({r, x})));
+  return `<div class="card tight"><div class="row" style="gap:8px"><b class="grow">⭐ รีวิวที่จดไว้ (${mine.length})</b><a class="btn ghost sm" href="${link}" style="text-decoration:none">เปิด ที่นี่ดี</a></div>
+    ${lines.length ? `<div class="mt-s" style="display:flex;flex-direction:column;gap:6px">${lines.slice(0, 5).map(({r, x}) => `<div class="small" style="word-break:break-word">${TYPE[r.type] || '📍'} <b>${esc(r.name)}</b> · ${esc(x.tag)}: ${esc(x.text)}</div>`).join('')}
+    ${lines.length > 5 ? `<div class="muted small">และอีก ${lines.length - 5} ข้อ</div>` : ''}</div>`
+    : `<div class="muted small mt-s">${mine.map(r => (TYPE[r.type] || '📍') + ' ' + esc(r.name) + (r.rating ? ' ★' + r.rating : '')).join(' · ')}</div>`}</div>`;
+}
 function vPlan(){
   const t = cur(); if (!t) return needTrip();
-  let h = passHtml(t) + remindersHtml(t, false);
+  let h = passHtml(t) + remindersHtml(t, false) + reviewsCard(t);
   h += `<div class="row" style="margin:18px 2px 6px"><h2 class="grow">🗓️ แผนเที่ยวรายวัน</h2><button class="btn ghost sm" data-act="addPlan" data-d="${currentDay(t) || 1}">+ เพิ่ม</button></div>`;
   if (!t.plan.length) h += `<div class="card flat muted small">ยังไม่มีแผน กด "+ เพิ่ม" ใส่สถานที่ เวลา และที่อยู่ แล้วกดนำทางด้วย Google Maps ได้</div>`;
   for (let d = 1; d <= days(t); d++) {
