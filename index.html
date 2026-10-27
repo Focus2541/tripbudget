@@ -239,6 +239,7 @@ details summary{cursor:pointer;list-style-position:inside}
   <button class="ib" data-act="menu" aria-label="เมนู">⋮</button>
   <div id="menu" hidden>
     <button data-act="editTrip">✏️ แก้ไขทริปนี้</button>
+    <button data-act="openMenuApp" id="menuAppBtn">📷 แปลเมนู / ป้าย</button>
     <button data-act="shareTrip" id="shareBtn">📤 แชร์ทริปนี้ให้เพื่อน</button>
     <button data-act="go" data-v="sos">🆘 การ์ดฉุกเฉิน</button>
     <button data-act="go" data-v="templates">📝 แก้เทมเพลตเตรียมของ</button>
@@ -719,7 +720,7 @@ function vBudget(){
   else if (pct(u, bt) > 85) alert = `<div class="alert warn mt">⚡ ใช้ไปแล้ว ${pct(u, bt)}% ของงบ</div>`;
   const foodLeft = budgetOf(t, 'food') - usedOf(t, 'food');
   if (bt && left >= 0 && remDays && num(t.budget.food)) alert += `<div class="alert good mt">🍜 ค่าอาหารเหลือใช้ได้วันละ ${money(Math.max(0, foodLeft) / remDays)} (อีก ${remDays} วัน)</div>`;
-  let h = passHtml(t) + dailyHtml(t) + `<div class="card"><div class="sum3">
+  let h = passHtml(t) + dailyHtml(t) + (isAbroad(t) ? `<button class="qmenu" data-act="openMenuApp" style="margin:0 0 12px"><span class="qi">📷</span><span class="grow"><b>แปลเมนู / ป้าย</b><small>ถ่ายรูป แปลเป็นไทย แล้วส่งรายจ่ายเข้าหน้านี้</small></span><span class="muted">›</span></button>` : '') + `<div class="card"><div class="sum3">
     <div><b class="num">${money(bt)}</b><span>งบรวม</span></div><div><b class="num">${money(u)}</b><span>ใช้ไป</span></div>
     <div><b class="num" style="color:${left < 0 ? 'var(--bad)' : 'var(--good)'}">${money(left)}</b><span>คงเหลือ</span></div></div>
     ${bt ? `<div class="bar ${barCls(pct(u, bt))} mt"><i style="width:${Math.min(100, pct(u, bt))}%"></i></div>` : ''}${alert}
@@ -1900,7 +1901,7 @@ const R2 = {
   async shareSum(){ if (!S || !S.cv) return; const t = cur(), b = await sumBlob(), f = new File([b], sumName(t), {type:'image/png'});
     if (navigator.canShare && navigator.canShare({files:[f]})) { try { await navigator.share({files:[f], title:'สรุปทริป ' + (t.name || ''), text:summaryText(t)}); } catch {} }
     else { download(f.name, b, 'image/png'); toast('เครื่องนี้แชร์รูปตรงไม่ได้ บันทึกรูปแล้ว ส่งใน LINE ได้'); } },
-  async openMenuApp(el, ev, sameTab){ const t = cur(); if (!t) return; const u = menuAppUrl(t);
+  async openMenuApp(el, ev, sameTab){ closeMenu(); const t = cur(); if (!t) return; const u = menuAppUrl(t);
     if (u) { publishActive(); if (sameTab) location.href = u; else window.open(u, '_blank', 'noopener'); return; }
     await dialog({title:'📷 แปลเมนู', text:'แอปแปลเมนูกำลังทำอยู่ เปิดใช้เมื่อไหร่ ปุ่มนี้จะพาไปที่แอปเลย และเพิ่มรายจ่ายเข้าทริปนี้ได้\n\nระหว่างนี้ใช้ Google Translate โหมดกล้อง หรือ Google Lens ส่องเมนูได้', ok:'เข้าใจแล้ว', cancel:''}); }
 };
@@ -1946,7 +1947,7 @@ function render(){
   const navKey = {form:'trips', compare:'trips', templates:'packing', split:'budget', imm:'tips', settings:'trips'}[v] || v;
   $$('.nav button').forEach(b => b.classList.toggle('on', b.dataset.v === navKey));
   const t = cur(); $('#topTrip').textContent = t && v !== 'trips' ? ((country(t) || {f:'🌍'}).f + ' ' + (t.name || 'ทริปไม่มีชื่อ')) : '';
-  $('[data-act="editTrip"]', $('#menu')).hidden = !t; $('#shareBtn').hidden = !t; $('#sosBtn').hidden = !t || v === 'sos';
+  $('[data-act="editTrip"]', $('#menu')).hidden = !t; $('#shareBtn').hidden = !t; $('#menuAppBtn').hidden = !t || !isAbroad(t); $('#sosBtn').hidden = !t || v === 'sos';
   $('#menuFt').textContent = 'ข้อมูลเก็บในเครื่องนี้เท่านั้น · v' + APP_V + (db.lastBackup ? ' · สำรองล่าสุด ' + ago(db.lastBackup) : ' · ยังไม่เคยสำรอง');
   const qt = cur(); if (qt && currentDay(qt) && ['packing','plan','tips','sos','split','imm'].includes(v)) $('#view').insertAdjacentHTML('beforeend', `<button class="fab qfab" data-act="quickPick" aria-label="บันทึกเร็ว">⚡</button>`);
   hydrate($('#view'));
