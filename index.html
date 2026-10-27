@@ -719,7 +719,7 @@ function vBudget(){
   else if (pct(u, bt) > 85) alert = `<div class="alert warn mt">⚡ ใช้ไปแล้ว ${pct(u, bt)}% ของงบ</div>`;
   const foodLeft = budgetOf(t, 'food') - usedOf(t, 'food');
   if (bt && left >= 0 && remDays && num(t.budget.food)) alert += `<div class="alert good mt">🍜 ค่าอาหารเหลือใช้ได้วันละ ${money(Math.max(0, foodLeft) / remDays)} (อีก ${remDays} วัน)</div>`;
-  let h = passHtml(t) + quickHtml(t) + dailyHtml(t) + `<div class="card"><div class="sum3">
+  let h = passHtml(t) + dailyHtml(t) + `<div class="card"><div class="sum3">
     <div><b class="num">${money(bt)}</b><span>งบรวม</span></div><div><b class="num">${money(u)}</b><span>ใช้ไป</span></div>
     <div><b class="num" style="color:${left < 0 ? 'var(--bad)' : 'var(--good)'}">${money(left)}</b><span>คงเหลือ</span></div></div>
     ${bt ? `<div class="bar ${barCls(pct(u, bt))} mt"><i style="width:${Math.min(100, pct(u, bt))}%"></i></div>` : ''}${alert}
@@ -2271,7 +2271,7 @@ window.addEventListener('focus', () => importInbox());
   db.trips = db.trips.map(normalizeTrip);
   if (db.currentId && !cur()) db.currentId = null;
   save();
-  ui.view = !db.currentId ? 'trips' : currentDay(cur()) ? 'budget' : 'packing';
+  ui.view = !db.currentId ? 'trips' : currentDay(cur()) ? 'trips' : 'packing';
   render(); setOnline(); setTimeout(notifyDue, 1500);
   if (migrated) setTimeout(() => dialog({title:`ย้ายข้อมูลเดิม ${migrated} ทริปแล้ว`, text:'รายจ่าย ตั๋ว และที่พักเดิมอยู่ในหน้างบประมาณ งบรวมเดิมใส่ไว้ในหมวด "อื่นๆ" ปรับแยกหมวดได้ที่ปุ่ม "ตั้งงบ"\nแนะนำกดสำรองข้อมูลเก็บไว้หนึ่งครั้ง', ok:'เข้าใจแล้ว', cancel:''}), 300);
   if (!ratesFresh()) fetchRates();
@@ -2282,7 +2282,7 @@ window.addEventListener('focus', () => importInbox());
   const sc = new URLSearchParams(location.search).get('a');
   if (sc) { history.replaceState(null, '', location.pathname);
     if (!cur()) toast('เลือกทริปก่อน', 'warn');
-    else if (sc === 'quick') { go('budget'); setTimeout(() => A.quickPick(), 150); }
+    else if (sc === 'quick') go('trips');
     else if (sc === 'menu') A.openMenuApp(null, null, true);
     else if (sc === 'sos') go('sos'); }
   if (!db.onboarded && !migrated) setTimeout(openOnb, 200);
