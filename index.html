@@ -166,6 +166,22 @@ table.t td{padding:9px 6px;border-bottom:1px solid var(--line)}table.t td.num{wh
 #big .bt{font-size:clamp(26px,7.5vw,50px);font-weight:700;line-height:1.35;word-break:break-word;color:var(--ink)}
 #big .bs{font-size:19px;color:var(--ink2);margin-top:18px}
 #big .bh{font-size:13px;color:var(--ink3);position:absolute;bottom:calc(20px + env(safe-area-inset-bottom,0px));left:0;right:0}
+.quick .qgrid{display:grid;grid-template-columns:repeat(auto-fill,minmax(70px,1fr));gap:8px}
+.qbtn{display:flex;flex-direction:column;align-items:center;gap:2px;padding:10px 4px;border-radius:14px;background:var(--acc-soft);color:var(--acc-ink);font-weight:600;font-size:13px;min-height:72px;justify-content:center;word-break:break-word;text-align:center}
+.qbtn span{font-size:26px;line-height:1.1}.qbtn:active{transform:scale(.96)}.qbtn.ghost{background:var(--soft);color:var(--ink2)}
+.kpdisp{text-align:center;padding:12px 0 6px}.kpdisp .num{font-size:40px;font-weight:600;color:var(--ink);line-height:1.2;word-break:break-all}
+.kpad{display:grid;grid-template-columns:repeat(3,1fr);gap:8px;margin-top:8px}
+.kpad button{height:60px;border-radius:14px;background:var(--soft);font-size:26px;font-weight:600;font-family:var(--f-num)}.kpad button:active{background:var(--soft2)}
+#updBar{position:fixed;left:12px;right:12px;bottom:calc(var(--nav) + env(safe-area-inset-bottom,0px) + 12px);z-index:90;background:var(--ink);color:#fff;border-radius:14px;padding:12px 16px;display:flex;align-items:center;gap:10px;font-size:14px;box-shadow:0 8px 24px rgba(0,0,0,.25);cursor:pointer;max-width:560px;margin:0 auto}
+#updBar b{color:#7fe0d9}
+#onb{position:fixed;inset:0;z-index:350;background:#fff;overflow-y:auto}
+.onbin{max-width:520px;margin:0 auto;min-height:100%;display:flex;flex-direction:column;padding:calc(16px + env(safe-area-inset-top,0px)) 20px calc(20px + env(safe-area-inset-bottom,0px))}
+.onbbody{flex:1;display:flex;flex-direction:column;justify-content:center;padding:20px 0}
+.onbicon{width:96px;height:96px;border-radius:28px;background:var(--acc-soft);display:grid;place-items:center;font-size:50px;margin-bottom:18px}
+.onbt{font-size:24px;line-height:1.3;margin-bottom:10px;text-wrap:balance}.onbd{font-size:16px;line-height:1.7;color:var(--ink2)}
+.onbd b{color:var(--ink)}.steps{padding-left:22px}.steps li{margin-bottom:8px}
+.kbd{display:inline-block;border:1px solid var(--line2);border-radius:6px;padding:0 6px;background:var(--soft);font-weight:700}
+.dots{display:flex;justify-content:center;gap:6px;margin:12px 0 16px}.dots i{width:8px;height:8px;border-radius:50%;background:var(--line2)}.dots i.on{background:var(--acc);width:22px;border-radius:4px}
 .nav{position:fixed;left:0;right:0;bottom:0;z-index:60;background:#fff;border-top:1px solid var(--line);display:flex;justify-content:center;padding-bottom:env(safe-area-inset-bottom,0px)}
 .nav button{flex:1;max-width:140px;min-width:0;height:var(--nav);display:flex;flex-direction:column;align-items:center;justify-content:center;gap:2px;font-size:12px;font-weight:600;color:var(--ink3);position:relative}
 .nav button span{font-size:22px;line-height:1;filter:grayscale(1);opacity:.55}
@@ -214,7 +230,9 @@ table.t td{padding:9px 6px;border-bottom:1px solid var(--line)}table.t td.num{wh
     <button data-act="exportData">💾 สำรองข้อมูล (.json)</button>
     <button data-act="importData">📂 กู้คืนข้อมูล</button>
     <button data-act="install" id="installBtn" hidden>📲 ติดตั้งเป็นแอป</button>
-    <div class="ft" id="menuFt">ข้อมูลเก็บในเครื่องนี้เท่านั้น · v5.3</div>
+    <button data-act="feedback">💬 ส่งความเห็น</button>
+    <button data-act="go" data-v="settings">⚙️ ตั้งค่า</button>
+    <div class="ft" id="menuFt">ข้อมูลเก็บในเครื่องนี้เท่านั้น</div>
   </div>
   <input type="file" id="importFile" accept=".json,application/json" hidden>
 </header>
@@ -233,8 +251,11 @@ table.t td{padding:9px 6px;border-bottom:1px solid var(--line)}table.t td.num{wh
 <div class="scrim" id="dlg" hidden></div>
 <div id="lb" data-act="closeLb" hidden><img id="lbImg" alt="รูปใบเสร็จ"></div>
 <div id="big" data-act="closeBig" hidden></div>
+<div id="updBar" data-act="applyUpdate" role="button" hidden></div>
+<div id="onb" role="dialog" aria-modal="true" aria-label="หน้าแนะนำ" hidden></div>
 <div id="toast" role="status" aria-live="polite"></div>
 
+<script src="version.js"></script>
 <script src="countries.js"></script>
 <script>
 'use strict';
@@ -526,6 +547,7 @@ function vTrips(){
     <div class="row">${db.trips.length > 1 ? '<button class="btn ghost sm" data-act="go" data-v="compare">⚖️ เทียบ</button>' : ''}<button class="btn pri" data-act="newTrip">+ ทริปใหม่</button></div></div>`;
   if (db.trips.length) { const ageD = db.lastBackup ? Math.floor((Date.now() - new Date(db.lastBackup)) / 864e5) : null;
     if (ageD === null || ageD >= 14) h += `<div class="alert warn row" style="margin-bottom:12px"><span class="grow">💾 ${ageD === null ? 'ยังไม่เคยสำรองข้อมูล' : 'ไม่ได้สำรองข้อมูลมา ' + ageD + ' วัน'} ถ้ามือถือหายหรือล้างข้อมูล Chrome ทริปจะหายหมด</span><button class="btn ghost sm" data-act="exportData">สำรองเลย</button></div>`; }
+  h += quickHtml(cur());
   if (!db.trips.length) return h + `<div class="empty"><div class="e">✈️</div><b>วางแผนทริปในที่เดียว</b>
     <p>สร้างทริปแล้วได้ลิสต์เตรียมของตามประเภททริป ตั้งงบและบันทึกรายจ่าย ถ้าไปต่างประเทศมีเคล็ดลับให้ด้วย</p>
     <button class="btn pri" data-act="newTrip">+ สร้างทริป</button></div>`;
@@ -677,7 +699,7 @@ function vBudget(){
   else if (pct(u, bt) > 85) alert = `<div class="alert warn mt">⚡ ใช้ไปแล้ว ${pct(u, bt)}% ของงบ</div>`;
   const foodLeft = budgetOf(t, 'food') - usedOf(t, 'food');
   if (bt && left >= 0 && remDays && num(t.budget.food)) alert += `<div class="alert good mt">🍜 ค่าอาหารเหลือใช้ได้วันละ ${money(Math.max(0, foodLeft) / remDays)} (อีก ${remDays} วัน)</div>`;
-  let h = passHtml(t) + `<div class="card"><div class="sum3">
+  let h = passHtml(t) + quickHtml(t) + `<div class="card"><div class="sum3">
     <div><b class="num">${money(bt)}</b><span>งบรวม</span></div><div><b class="num">${money(u)}</b><span>ใช้ไป</span></div>
     <div><b class="num" style="color:${left < 0 ? 'var(--bad)' : 'var(--good)'}">${money(left)}</b><span>คงเหลือ</span></div></div>
     ${bt ? `<div class="bar ${barCls(pct(u, bt))} mt"><i style="width:${Math.min(100, pct(u, bt))}%"></i></div>` : ''}${alert}</div>`;
@@ -1317,6 +1339,205 @@ async function shareTrip(){
   download(name, JSON.stringify(data), 'application/json'); toast('บันทึกไฟล์แล้ว ส่งให้เพื่อนได้เลย');
 }
 
+/* ============ APP VERSION / UPDATE ============ */
+const APP_V = self.APP_VERSION || 'dev';
+let swReg = null, updateReady = false, updating = false, remoteVer = '';
+function showUpdateBar(remoteV){
+  if (remoteV) remoteVer = remoteV; remoteV = remoteVer; updateReady = true; const el = $('#updBar');
+  el.innerHTML = `<span class="grow">🔄 มีอัปเดต${remoteV && remoteV !== APP_V ? ' v' + esc(remoteV) : ''} กดเพื่อโหลดใหม่</span><b>โหลดใหม่</b>`;
+  el.hidden = false;
+}
+async function applyUpdate(){
+  updating = true; save(); toast('กำลังโหลดเวอร์ชันใหม่...');
+  try {
+    if (swReg && swReg.waiting) { swReg.waiting.postMessage('SKIP_WAITING'); setTimeout(() => location.reload(), 4000); return; }
+    if (swReg) { await swReg.update(); if (swReg.waiting) { swReg.waiting.postMessage('SKIP_WAITING'); setTimeout(() => location.reload(), 4000); return; } }
+    const keys = await caches.keys(); await Promise.all(keys.filter(k => k.startsWith('tripbudget-')).map(k => caches.delete(k)));
+  } catch {}
+  location.reload();
+}
+async function checkRemoteVersion(manual){
+  if (!navigator.onLine || !/^https?:$/.test(location.protocol)) { if (manual) toast('ต้องต่ออินเทอร์เน็ตเพื่อตรวจอัปเดต', 'warn'); return; }
+  try {
+    const txt = await (await fetch('version.js?check=' + Date.now(), {cache:'no-store'})).text();
+    const m = txt.match(/APP_VERSION\s*=\s*['"]([^'"]+)['"]/), remote = m && m[1];
+    if (remote && remote !== APP_V) { if (swReg) swReg.update().catch(() => {}); showUpdateBar(remote); }
+    else if (manual) toast('ใช้เวอร์ชันล่าสุดอยู่แล้ว (v' + APP_V + ')');
+  } catch { if (manual) toast('ตรวจอัปเดตไม่ได้ ลองใหม่อีกครั้ง', 'warn'); }
+}
+function setupSW(){
+  if (!('serviceWorker' in navigator) || !/^https?:$/.test(location.protocol)) return;
+  navigator.serviceWorker.addEventListener('controllerchange', () => { if (updating) location.reload(); });
+  navigator.serviceWorker.register('sw.js', {updateViaCache:'none'}).then(reg => {
+    swReg = reg;
+    const watch = w => { if (!w) return; w.addEventListener('statechange', () => { if (w.state === 'installed' && navigator.serviceWorker.controller) showUpdateBar(); }); };
+    if (reg.waiting && navigator.serviceWorker.controller) showUpdateBar();
+    watch(reg.installing); reg.addEventListener('updatefound', () => watch(reg.installing));
+    reg.update().catch(() => {});
+    document.addEventListener('visibilitychange', () => { if (document.visibilityState === 'visible') { reg.update().catch(() => {}); checkRemoteVersion(false); } });
+  }).catch(() => {});
+  setTimeout(() => checkRemoteVersion(false), 3000);
+}
+
+/* ============ OUTBOX (ส่งเข้า Google Sheet, เก็บคิวเมื่อออฟไลน์) ============ */
+const OUTBOX = 'tb_outbox', USAGE = 'tb_usage';
+const sheetUrl = () => (self.FEEDBACK_URL || '').trim();
+function outbox(){ try { return JSON.parse(localStorage.getItem(OUTBOX)) || []; } catch { return []; } }
+function setOutbox(a){ try { localStorage.setItem(OUTBOX, JSON.stringify(a.slice(-50))); } catch {} }
+async function postSheet(payload){
+  await fetch(sheetUrl(), {method:'POST', mode:'no-cors', headers:{'Content-Type':'text/plain;charset=utf-8'}, body:JSON.stringify(payload)});
+}
+async function flushOutbox(){
+  if (!navigator.onLine || !sheetUrl()) return 0;
+  let box = outbox(), sent = 0;
+  while (box.length) { try { await postSheet(box[0]); box.shift(); sent++; setOutbox(box); } catch { break; } }
+  return sent;
+}
+
+/* ============ USAGE STATS (ไม่ระบุตัวตน) ============ */
+const usageOn = () => !(db.settings && db.settings.usage === false);
+function usageData(){ try { return JSON.parse(localStorage.getItem(USAGE)) || {days:{}}; } catch { return {days:{}}; } }
+function setUsage(u){ try { localStorage.setItem(USAGE, JSON.stringify(u)); } catch {} }
+function track(name){
+  if (!usageOn() || !name) return;
+  const u = usageData(), d = todayIso(), day = u.days[d] = u.days[d] || {c:{}, e:[]};
+  day.c[name] = (day.c[name] || 0) + 1; setUsage(u);
+}
+function trackError(msg, src){
+  if (!usageOn()) return;
+  const u = usageData(), d = todayIso(), day = u.days[d] = u.days[d] || {c:{}, e:[]};
+  const m = String(msg || 'unknown').slice(0, 200), s = String(src || '').slice(0, 80), hit = day.e.find(x => x.m === m && x.s === s);
+  if (hit) hit.n++; else if (day.e.length < 20) day.e.push({m, s, n:1});
+  setUsage(u);
+}
+window.addEventListener('error', e => trackError(e.message, (String(e.filename || '').split('/').pop() || '') + ':' + (e.lineno || '')));
+window.addEventListener('unhandledrejection', e => trackError('Promise: ' + ((e.reason && e.reason.message) || e.reason), ''));
+function pendingUsage(){
+  const u = usageData(), td = todayIso();
+  return Object.keys(u.days).filter(d => d < td).sort().map(d => ({date:d, counts:u.days[d].c, errors:u.days[d].e}));
+}
+async function sendUsage(){
+  if (!usageOn() || !sheetUrl() || !navigator.onLine) return;
+  const days = pendingUsage(); if (!days.length) return;
+  try {
+    await postSheet({kind:'usage', v:APP_V, days});
+    const u = usageData(); days.forEach(d => delete u.days[d.date]); setUsage(u);
+  } catch {}
+}
+function pruneUsage(){ const u = usageData(), keys = Object.keys(u.days).sort(); while (keys.length > 30) delete u.days[keys.shift()]; setUsage(u); }
+
+/* ============ QUICK ADD (บันทึกเร็ว) ============ */
+const DEFAULT_QUICK = () => [{id:uid(), name:'ข้าว', icon:'🍚', cat:'food'}, {id:uid(), name:'เดินทาง', icon:'🚇', cat:'transport'}, {id:uid(), name:'ขนม', icon:'🍡', cat:'food'}, {id:uid(), name:'ของฝาก', icon:'🎁', cat:'shopping'}];
+function quickDay(t){ const cd = currentDay(t); if (cd) return cd; if (t.startDate && todayIso() > endDate(t)) return days(t); return 0; }
+function quickHtml(t){
+  if (!t) return '';
+  const td = quickDay(t), todaySum = t.expenses.filter(e => e.day === td).reduce((a, e) => a + expThb(e), 0);
+  return `<div class="card quick"><div class="ch"><h2>⚡ บันทึกเร็ว</h2><span class="muted small">${esc(t.name || 'ทริป')} · ${td ? 'วันที่ ' + td : 'ก่อนเดินทาง'}${todaySum ? ' · ' + money(todaySum) : ''}</span></div>
+    <div class="qgrid" style="grid-template-columns:repeat(${Math.min(db.quick.length + 1, 5)},minmax(0,1fr))">${db.quick.map(q => `<button class="qbtn" data-act="quick" data-id="${q.id}"><span>${esc(q.icon)}</span>${esc(q.name)}</button>`).join('')}
+    <button class="qbtn ghost" data-act="addExp"><span>＋</span>อื่นๆ</button></div></div>`;
+}
+function quickSheet(q){
+  const t = cur(); if (!t) return;
+  const ab = isAbroad(t) && t.currency && t.currency !== 'THB';
+  S = {kind:'quick', q, val:'', curr:ab ? t.currency : 'THB'};
+  openSheet(`<div class="sh"><b>${esc(q.icon)} ${esc(q.name)}</b><button class="x" data-act="closeSheet" aria-label="ปิด">✕</button></div>
+    ${ab ? `<div class="seg" id="qCurr"><button class="on" data-act="qCurr" data-c="${t.currency}">${t.currency}</button><button data-act="qCurr" data-c="THB">บาท</button></div>` : ''}
+    <div class="kpdisp"><div class="num" id="qVal">0</div><div class="muted small" id="qThb">&nbsp;</div></div>
+    <div class="kpad">${['1','2','3','4','5','6','7','8','9','.','0','⌫'].map(k => `<button data-act="kp" data-k="${k}" aria-label="${k === '⌫' ? 'ลบ' : k}">${k}</button>`).join('')}</div>
+    <input id="qNote" placeholder="รายละเอียด (ไม่บังคับ) เช่น ราเมงอิจิรัน" maxlength="80" style="margin-top:10px">
+    <div class="sf"><button class="btn ghost" data-act="closeSheet">ยกเลิก</button><button class="btn pri" style="flex:1" data-act="saveQuick" id="qSave" disabled>บันทึก</button></div>`);
+  renderKp();
+}
+function renderKp(){
+  const t = cur(); if (!S || S.kind !== 'quick') return;
+  const v = num(S.val), sym = (CURR[S.curr] || {s:''}).s;
+  const [ip, dp] = (S.val || '0').split('.');
+  $('#qVal').textContent = sym + ip.replace(/\B(?=(\d{3})+$)/g, ',') + (dp !== undefined ? '.' + dp : '');
+  $('#qThb').innerHTML = S.curr !== 'THB' && v ? '≈ ' + money(v * t.rate) : '&nbsp;';
+  const b = $('#qSave'); b.disabled = !(v > 0); b.textContent = v > 0 ? 'บันทึก ' + money(v, S.curr) : 'บันทึก';
+}
+function kpPress(k){
+  if (!S || S.kind !== 'quick') return;
+  let v = S.val;
+  if (k === '⌫') v = v.slice(0, -1);
+  else if (k === '.') { if (ZERO_DEC.has(S.curr) || v.includes('.')) return; v = (v || '0') + '.'; }
+  else { if (v === '0') v = ''; if (v.includes('.') && v.split('.')[1].length >= 2) return; if (v.replace('.', '').length >= 9) return; v += k; }
+  S.val = v; renderKp();
+}
+
+/* ============ ONBOARDING ============ */
+const isIOS = () => /iPhone|iPad|iPod/i.test(navigator.userAgent) || (navigator.platform === 'MacIntel' && navigator.maxTouchPoints > 1);
+const isStandalone = () => window.matchMedia('(display-mode: standalone)').matches || navigator.standalone === true;
+let onbStep = 0, onbOS = null;
+function onbSlides(){
+  const os = onbOS || (isIOS() ? 'ios' : 'android');
+  return [
+    {i:'🧳', t:'ทุกอย่างของทริปในแอปเดียว', d:'เตรียมของ งบประมาณ แผนเที่ยว เคล็ดลับต่างประเทศ และการ์ดฉุกเฉิน ใช้ได้แม้ไม่มีเน็ต ข้อมูลเก็บในมือถือเครื่องนี้เท่านั้น'},
+    {i:'✈️', t:'1. สร้างทริป', d:'กด <b>+ ทริปใหม่</b> ใส่ชื่อ ประเทศ วันเดินทาง และจำนวนวัน แอปจะทำลิสต์ของที่ต้องเตรียม ดึงเรทเงิน และขึ้นเคล็ดลับของประเทศนั้นให้เอง'},
+    {i:'⚡', t:'2. บันทึกรายจ่าย', d:'หน้า <b>ทริป</b> และ <b>งบประมาณ</b> มีปุ่มลัด ข้าว เดินทาง ขนม ของฝาก แตะแล้วกดยอดเงินสกุลท้องถิ่น แอปแปลงเป็นบาทให้ แก้ปุ่มลัดได้ในตั้งค่า'},
+    {i:'📲', t:'3. ติดตั้งเป็นแอป', install:true, os, d:isStandalone() ? '✅ ติดตั้งแล้ว เปิดจากไอคอนบนหน้าจอได้เลย' :
+      os === 'ios' ? `<ol class="steps"><li>เปิดลิงก์นี้ด้วย <b>Safari</b> (Chrome บน iPhone ติดตั้งไม่ได้)</li><li>กดปุ่ม <b>แชร์</b> <span class="kbd">⬆︎</span> ด้านล่างจอ</li><li>เลื่อนหา <b>เพิ่มไปยังหน้าจอโฮม</b> แล้วกด <b>เพิ่ม</b></li></ol>
+        <div class="alert warn small mt-s">บน iPhone ข้อมูลในแอปที่ติดตั้งแยกจากใน Safari ควรติดตั้งก่อน แล้วค่อยเริ่มกรอกข้อมูลในแอป</div>`
+      : `<ol class="steps"><li>เปิดลิงก์นี้ด้วย <b>Chrome</b></li><li>กดเมนู <span class="kbd">⋮</span> มุมขวาบน</li><li>กด <b>ติดตั้งแอป</b> หรือ <b>เพิ่มลงในหน้าจอหลัก</b></li></ol>
+        ${deferredPrompt ? '<button class="btn pri mt-s" data-act="install">📲 ติดตั้งเลย</button>' : ''}`}
+  ];
+}
+function renderOnb(){
+  const sl = onbSlides(), s = sl[onbStep], last = onbStep === sl.length - 1, el = $('#onb');
+  el.innerHTML = `<div class="onbin"><div class="row"><span class="grow"></span>${last ? '' : '<button class="link" data-act="onbDone">ข้าม</button>'}</div>
+    <div class="onbbody"><div class="onbicon">${s.i}</div><h2 class="onbt">${s.t}</h2>
+    ${s.install && !isStandalone() ? `<div class="seg" style="margin:6px 0 10px"><button class="${s.os === 'android' ? 'on' : ''}" data-act="onbOS" data-os="android">Android</button><button class="${s.os === 'ios' ? 'on' : ''}" data-act="onbOS" data-os="ios">iPhone</button></div>` : ''}
+    <div class="onbd">${s.d}</div>${last ? `<div class="muted small mt">แอปนับการใช้งานแบบไม่ระบุตัวตน (ไม่มียอดเงินหรือชื่อรายการ) เพื่อปรับปรุงแอป ปิดได้ในตั้งค่า</div>` : ''}</div>
+    <div class="dots">${sl.map((_, i) => `<i class="${i === onbStep ? 'on' : ''}"></i>`).join('')}</div>
+    <div class="row">${onbStep ? '<button class="btn ghost" data-act="onbPrev">ย้อนกลับ</button>' : ''}<span class="grow"></span>
+    <button class="btn pri" data-act="${last ? 'onbDone' : 'onbNext'}">${last ? 'เริ่มใช้งาน' : 'ถัดไป'}</button></div></div>`;
+  el.hidden = false; document.body.classList.add('lock');
+}
+function openOnb(){ onbStep = 0; onbOS = null; track('v:onboarding'); renderOnb(); }
+
+/* ============ SETTINGS ============ */
+const FB_TYPES = {hard:'ใช้ยาก', feature:'อยากได้ฟีเจอร์', bug:'เจอบั๊ก'};
+function vSettings(){
+  const box = outbox(), pend = pendingUsage(), todayU = (usageData().days[todayIso()] || {c:{}}).c;
+  return `<div class="hd"><div><h1>⚙️ ตั้งค่า</h1><div class="muted">TripBudget v${esc(APP_V)}</div></div><button class="btn ghost sm" data-act="back">เสร็จ</button></div>
+  <div class="card"><div class="ch"><h2>📦 เวอร์ชัน</h2><span class="tag num">v${esc(APP_V)}</span></div>
+    ${updateReady ? `<div class="alert info row"><span class="grow">มีเวอร์ชันใหม่พร้อมแล้ว</span><button class="btn pri sm" data-act="applyUpdate">โหลดใหม่</button></div>` : `<button class="btn ghost sm" data-act="checkUpdate">🔄 ตรวจหาอัปเดต</button>`}
+    <div class="muted small mt-s">เมื่อมีเวอร์ชันใหม่ แอปจะขึ้นแถบ "มีอัปเดต" ให้กดโหลดใหม่ ข้อมูลในเครื่องไม่หาย</div></div>
+  <div class="card"><div class="ch"><h2>👋 หน้าแนะนำ</h2></div><button class="btn ghost sm" data-act="openOnb">เปิดดูหน้าแนะนำอีกครั้ง</button>
+    ${!isStandalone() ? `<button class="btn ghost sm" data-act="openOnbInstall" style="margin-left:6px">📲 วิธีติดตั้งเป็นแอป</button>` : ''}</div>
+  <div class="card"><div class="ch"><h2>⚡ ปุ่มบันทึกเร็ว</h2><button class="btn ghost sm" data-act="addQuickBtn" ${db.quick.length >= 8 ? 'disabled' : ''}>+ เพิ่ม</button></div>
+    ${db.quick.map(q => `<div class="row" style="margin-bottom:8px" data-qid="${q.id}"><input data-qf="icon" value="${esc(q.icon)}" maxlength="4" style="width:56px;text-align:center;font-size:20px" aria-label="ไอคอน">
+      <input data-qf="name" value="${esc(q.name)}" maxlength="20" class="grow" aria-label="ชื่อปุ่ม" style="min-width:0">
+      <select data-qf="cat" style="width:auto;max-width:120px" aria-label="หมวด">${Object.entries(BCATS).map(([k, c]) => `<option value="${k}" ${k === q.cat ? 'selected' : ''}>${c.i} ${c.n.split(' (')[0]}</option>`).join('')}</select>
+      <button class="btn danger sm" data-act="delQuickBtn" data-id="${q.id}" ${db.quick.length < 2 ? 'disabled' : ''} aria-label="ลบ">ลบ</button></div>`).join('')}
+    <button class="link" data-act="resetQuick">คืนค่าเริ่มต้น</button></div>
+  <div class="card"><div class="ch"><h2>💬 ส่งความเห็น</h2></div><div class="muted small" style="margin-bottom:8px">ใช้ยากตรงไหน อยากได้อะไร หรือเจอปัญหา บอกได้เลย</div>
+    <button class="btn pri sm" data-act="feedback">เขียนความเห็น</button>${box.length ? `<div class="muted small mt-s">📮 รอส่ง ${box.length} รายการ (จะส่งเมื่อมีเน็ต)</div>` : ''}</div>
+  <div class="card"><div class="ch"><h2>📊 สถิติการใช้งาน</h2><label class="tog"><input type="checkbox" id="usageTog" ${usageOn() ? 'checked' : ''}>${usageOn() ? 'เปิดอยู่' : 'ปิดอยู่'}</label></div>
+    <div class="small" style="color:var(--ink2)">ช่วยให้รู้ว่าฟีเจอร์ไหนถูกใช้บ่อย และเจอ error ตรงไหน ส่งวันละครั้งแบบไม่ระบุตัวตน</div>
+    <div class="g2 mt" style="gap:8px"><div class="alert good small"><b>✓ ส่ง</b><br>• ชื่อหน้าและปุ่มที่กด กับจำนวนครั้งต่อวัน<br>• ข้อความ error ของแอป<br>• วันที่ และเลขเวอร์ชันแอป</div>
+    <div class="alert bad small"><b>✗ ไม่ส่ง</b><br>• ยอดเงิน ชื่อรายการ ชื่อทริป<br>• ประเทศ วันเดินทาง ชื่อคน<br>• รูป ข้อมูลการ์ดฉุกเฉิน<br>• รหัสเครื่องหรือตัวตนของคุณ</div></div>
+    <div class="row mt-s"><span class="muted small grow">วันนี้นับไว้ ${Object.values(todayU).reduce((a, b) => a + b, 0)} ครั้ง · รอส่ง ${pend.length} วัน</span><button class="btn ghost sm" data-act="previewUsage">ดูข้อมูลที่รอส่ง</button></div></div>
+  <div class="card"><div class="ch"><h2>💾 ข้อมูล</h2></div><div class="row wrap"><button class="btn ghost sm" data-act="exportData">สำรองข้อมูล</button><button class="btn ghost sm" data-act="importData">กู้คืนข้อมูล</button></div>
+    <div class="muted small mt-s">${db.lastBackup ? 'สำรองล่าสุด ' + ago(db.lastBackup) : 'ยังไม่เคยสำรอง'} · ข้อมูลทริปเก็บในเครื่องนี้เท่านั้น</div></div>`;
+}
+function feedbackSheet(){
+  const t = cur();
+  S = {kind:'feedback', type:'feature'};
+  openSheet(`<div class="sh"><b>💬 ส่งความเห็น</b><button class="x" data-act="closeSheet" aria-label="ปิด">✕</button></div>
+    <div class="stack"><div><div class="muted small" style="margin-bottom:6px">เรื่องอะไร</div><div class="chips" id="fbType">${Object.entries(FB_TYPES).map(([k, n]) => `<button class="chip ${k === S.type ? 'on' : ''}" data-act="fbType" data-k="${k}">${n}</button>`).join('')}</div></div>
+    <label class="f">ข้อความ<textarea id="fbMsg" rows="5" maxlength="2000" placeholder="เล่าได้เลย เช่น หน้าไหน กดอะไรแล้วเกิดอะไรขึ้น"></textarea></label>
+    <label class="f">ชื่อเล่น (ไม่บังคับ)<input id="fbNick" maxlength="40" placeholder="ไม่ใส่ก็ได้"></label>
+    ${t ? `<label class="tog" style="align-items:flex-start;border-radius:12px;padding:10px 12px"><input type="checkbox" id="fbTrip" style="margin-top:3px"><span>ยินยอมแนบข้อมูลทริป "${esc(t.name || 'ทริป')}" (ประเทศ วันที่ งบ รายจ่าย ลิสต์ของ) เพื่อช่วยหาปัญหา<br><span class="muted small">ไม่แนบรูป และไม่แนบข้อมูลการ์ดฉุกเฉิน</span></span></label>` : ''}
+    <div class="muted small">ส่งพร้อมเลขเวอร์ชันแอปและรุ่นเบราว์เซอร์ ถ้าไม่มีเน็ต แอปจะเก็บไว้ส่งให้ทีหลัง</div></div>
+    <div class="sf"><span class="sp"></span><button class="btn ghost" data-act="closeSheet">ยกเลิก</button><button class="btn pri" data-act="sendFeedback">ส่ง</button></div>`);
+}
+function tripForFeedback(t){
+  const c = clone(t); delete c.sos; delete c.immAns;
+  c.expenses.forEach(e => e.receipts = []); c.docs = (c.docs || []).map(d => ({title:d.title, kind:d.kind, files:d.files.length}));
+  return c;
+}
+
 /* ============ BACKUP ============ */
 async function exportData(){
   const receipts = await collectFiles(db.trips);
@@ -1351,19 +1572,19 @@ async function importData(file){
 }
 
 /* ============ RENDER ============ */
-const VIEWS = {imm:vImm, trips:vTrips, form:vForm, packing:vPacking, budget:vBudget, tips:vTips, templates:vTemplates, split:vSplit, compare:vCompare, plan:vPlan, sos:vSos};
+const VIEWS = {settings:vSettings, imm:vImm, trips:vTrips, form:vForm, packing:vPacking, budget:vBudget, tips:vTips, templates:vTemplates, split:vSplit, compare:vCompare, plan:vPlan, sos:vSos};
 function render(){
   const v = VIEWS[ui.view] ? ui.view : 'trips';
   $('#view').innerHTML = VIEWS[v]();
-  const navKey = {form:'trips', compare:'trips', templates:'packing', split:'budget', imm:'tips'}[v] || v;
+  const navKey = {form:'trips', compare:'trips', templates:'packing', split:'budget', imm:'tips', settings:'trips'}[v] || v;
   $$('.nav button').forEach(b => b.classList.toggle('on', b.dataset.v === navKey));
   const t = cur(); $('#topTrip').textContent = t && v !== 'trips' ? ((country(t) || {f:'🌍'}).f + ' ' + (t.name || 'ทริปไม่มีชื่อ')) : '';
   $('[data-act="editTrip"]', $('#menu')).hidden = !t; $('#shareBtn').hidden = !t; $('#sosBtn').hidden = !t || v === 'sos';
-  $('#menuFt').textContent = 'ข้อมูลเก็บในเครื่องนี้เท่านั้น · v5.3' + (db.lastBackup ? ' · สำรองล่าสุด ' + ago(db.lastBackup) : ' · ยังไม่เคยสำรอง');
+  $('#menuFt').textContent = 'ข้อมูลเก็บในเครื่องนี้เท่านั้น · v' + APP_V + (db.lastBackup ? ' · สำรองล่าสุด ' + ago(db.lastBackup) : ' · ยังไม่เคยสำรอง');
   hydrate($('#view'));
 }
 let prevView = 'trips';
-function go(v){ if (v !== ui.view) prevView = ui.view; ui.view = v; render(); window.scrollTo(0, 0); }
+function go(v){ if (v !== ui.view) prevView = ui.view; ui.view = v; track('v:' + v); render(); window.scrollTo(0, 0); }
 const closeMenu = () => { $('#menu').hidden = true; };
 
 /* ============ ACTIONS ============ */
@@ -1509,6 +1730,40 @@ const A = {
     const t = cur(); if (t) Object.assign(t.sos, {hotel:v('sHotel').trim(), hotelAddr:v('sAddr').trim(), hotelPhone:v('sHotelTel').trim(), insurer:v('sIns').trim(), policy:v('sPolicy').trim(), insPhone:v('sInsTel').trim(), embassy:v('sEmb').trim(), note:v('sNote').trim()});
     save(); closeSheet(); render(); toast('บันทึกการ์ดฉุกเฉินแล้ว'); },
   bigText(el){ showBig(el.dataset.k); },
+  quick(el){ const q = db.quick.find(x => x.id === el.dataset.id); if (q) quickSheet(q); },
+  qCurr(el){ S.curr = el.dataset.c; $$('#qCurr button').forEach(b => b.classList.toggle('on', b.dataset.c === S.curr)); if (ZERO_DEC.has(S.curr)) S.val = S.val.split('.')[0]; renderKp(); },
+  kp(el){ kpPress(el.dataset.k); },
+  saveQuick(){ const t = cur(), amount = num(S.val); if (!(amount > 0)) return;
+    const q = S.q, note = $('#qNote').value.trim();
+    t.expenses.push({id:uid(), name:note || q.name, cat:BCATS[q.cat] ? q.cat : 'other', amount, curr:S.curr, rate:S.curr === 'THB' ? 1 : t.rate, day:quickDay(t), note:note ? q.name : '', receipts:[], paidBy:t.members[0].id, splitAmong:t.members.map(m => m.id)});
+    const c = S.curr; save(); closeSheet(); render(); toast(`บันทึก ${q.icon} ${money(amount, c)}${c !== 'THB' ? ' (≈' + money(amount * t.rate) + ')' : ''} แล้ว`); },
+  onbNext(){ onbStep++; renderOnb(); }, onbPrev(){ onbStep = Math.max(0, onbStep - 1); renderOnb(); },
+  onbOS(el){ onbOS = el.dataset.os; renderOnb(); },
+  onbDone(){ db.onboarded = true; save(); $('#onb').hidden = true; $('#onb').innerHTML = ''; document.body.classList.remove('lock'); },
+  openOnb(){ openOnb(); }, openOnbInstall(){ openOnb(); onbStep = onbSlides().length - 1; renderOnb(); },
+  applyUpdate(){ applyUpdate(); }, checkUpdate(){ checkRemoteVersion(true); },
+  addQuickBtn(){ if (db.quick.length >= 8) return; db.quick.push({id:uid(), name:'ใหม่', icon:'🧾', cat:'other'}); save(); render(); },
+  delQuickBtn(el){ if (db.quick.length < 2) return; db.quick = db.quick.filter(q => q.id !== el.dataset.id); save(); render(); },
+  async resetQuick(){ if (!await dialog({title:'คืนค่าปุ่มบันทึกเร็ว?', text:'กลับเป็น ข้าว เดินทาง ขนม ของฝาก', ok:'คืนค่า'})) return; db.quick = DEFAULT_QUICK(); save(); render(); },
+  feedback(){ closeMenu(); feedbackSheet(); },
+  fbType(el){ S.type = el.dataset.k; $$('#fbType .chip').forEach(c => c.classList.toggle('on', c.dataset.k === S.type)); },
+  async sendFeedback(){
+    const msg = $('#fbMsg').value.trim(); if (!msg) { toast('พิมพ์ข้อความก่อน', 'bad'); $('#fbMsg').focus(); return; }
+    const t = cur(), attach = $('#fbTrip') && $('#fbTrip').checked;
+    const payload = {kind:'feedback', type:FB_TYPES[S.type] || S.type, message:msg, nickname:$('#fbNick').value.trim(), v:APP_V,
+      ua:navigator.userAgent.slice(0, 200), standalone:isStandalone(), at:new Date().toISOString(), trip:attach && t ? tripForFeedback(t) : null};
+    setOutbox([...outbox(), payload]); closeSheet();
+    const sent = await flushOutbox();
+    toast(sent ? 'ส่งแล้ว ขอบคุณมาก 🙏' : !sheetUrl() ? 'บันทึกไว้แล้ว จะส่งเมื่อแอปตั้งค่าที่ส่งเสร็จ' : 'ยังไม่มีเน็ต เก็บไว้ส่งให้ทีหลัง', sent ? '' : 'warn');
+    if (ui.view === 'settings') render(); },
+  previewUsage(){
+    const data = {kind:'usage', v:APP_V, days:pendingUsage()}, today = usageData().days[todayIso()];
+    openSheet(`<div class="sh"><b>📊 ข้อมูลที่รอส่ง</b><button class="x" data-act="closeSheet" aria-label="ปิด">✕</button></div>
+      <div class="muted small">ข้อมูลของวันที่ผ่านมาจะส่งวันละครั้ง ข้อมูลวันนี้จะส่งพรุ่งนี้</div>
+      <pre style="white-space:pre-wrap;word-break:break-all;background:var(--soft);padding:12px;border-radius:10px;font-size:12px;margin-top:8px">${esc(JSON.stringify(data, null, 1))}</pre>
+      <div class="muted small" style="font-weight:700">วันนี้ (ยังไม่ส่ง)</div><pre style="white-space:pre-wrap;word-break:break-all;background:var(--soft);padding:12px;border-radius:10px;font-size:12px">${esc(JSON.stringify(today || {}, null, 1))}</pre>
+      <div class="sf"><button class="btn danger" data-act="clearUsage">ลบข้อมูลสถิติในเครื่อง</button><span class="sp"></span><button class="btn ghost" data-act="closeSheet">ปิด</button></div>`); S = {kind:'preview'}; },
+  clearUsage(){ setUsage({days:{}}); closeSheet(); render(); toast('ลบแล้ว'); },
   say(el){ say(el.dataset.t); },
   bigImm(el){ const i = el.dataset.i;
     if (i[0] === 'h' && /^h\d$/.test(i)) { const [en, th] = IMM_HELP[+i.slice(1)]; showBigText(en, th); return; }
@@ -1522,7 +1777,7 @@ const A = {
   closeBig(){ $('#big').hidden = true; },
   shareTrip(){ closeMenu(); shareTrip(); },
   scanPick(el){ $('#eAmt').value = el.dataset.v; expPreview(); $$('#scanOut .chip').forEach(c => c.classList.toggle('on', c === el)); },
-  async install(){ closeMenu(); if (!deferredPrompt) return; deferredPrompt.prompt(); await deferredPrompt.userChoice; deferredPrompt = null; $('#installBtn').hidden = true; }
+  async install(){ closeMenu(); if (!deferredPrompt) { openOnb(); onbStep = onbSlides().length - 1; renderOnb(); return; } deferredPrompt.prompt(); await deferredPrompt.userChoice; deferredPrompt = null; if (!$('#onb').hidden) renderOnb(); $('#installBtn').hidden = true; }
 };
 
 /* ============ EVENTS ============ */
@@ -1534,10 +1789,11 @@ document.addEventListener('click', e => {
   const el = e.target.closest('[data-act]');
   if (!el || (!el.closest('#menu') && el.dataset.act !== 'menu')) closeMenu();
   if (!el || el.disabled) return;
-  const f = A[el.dataset.act]; if (f) { e.stopPropagation(); f(el, e); }
+  const f = A[el.dataset.act]; if (f) { e.stopPropagation(); if (!/^(go|kp|menu|closeSheet|closeBig|closeLb|lb)$/.test(el.dataset.act)) track('a:' + el.dataset.act); f(el, e); }
 });
 document.addEventListener('input', e => {
   const el = e.target;
+  if (el.dataset.qf) { const q = db.quick.find(x => x.id === el.closest('[data-qid]').dataset.qid); if (q) { q[el.dataset.qf] = el.dataset.qf === 'cat' ? el.value : el.value.trim() || (el.dataset.qf === 'icon' ? '🧾' : 'ปุ่ม'); saveSoon(); } return; }
   if (el.dataset.fm !== undefined && ui.form) { const m = ui.form.members[+el.dataset.fm]; if (m) m.name = el.value; return; }
   if (el.dataset.ff && ui.form) {
     const f = ui.form, k = el.dataset.ff; f[k] = el.value;
@@ -1561,6 +1817,7 @@ document.addEventListener('input', e => {
 });
 document.addEventListener('change', async e => {
   const el = e.target;
+  if (el.id === 'usageTog') { db.settings.usage = el.checked; if (!el.checked) setUsage({days:{}}); save(); render(); toast(el.checked ? 'เปิดสถิติการใช้งานแล้ว' : 'ปิดและลบสถิติในเครื่องแล้ว'); return; }
   if (el.id === 'scanFile' && el.files[0] && S) {
     const file = el.files[0]; el.value = ''; const out = $('#scanOut');
     if (!navigator.onLine) { toast('การสแกนต้องใช้อินเทอร์เน็ต', 'warn'); return; }
@@ -1592,14 +1849,16 @@ document.addEventListener('change', async e => {
   if (el.dataset.tf === 'cat') { const it = db.templates[ui.tplGroup].find(x => x.id === el.closest('[data-tid]').dataset.tid); if (it) { it.cat = el.value; save(); } }
 });
 document.addEventListener('keydown', e => {
+  if (S && S.kind === 'quick' && e.target.id !== 'qNote') { if (/^[0-9.]$/.test(e.key)) { kpPress(e.key); e.preventDefault(); return; } if (e.key === 'Backspace') { kpPress('⌫'); e.preventDefault(); return; } if (e.key === 'Enter' && num(S.val) > 0) { A.saveQuick(); return; } }
   if (e.key !== 'Escape') return;
+  if (!$('#onb').hidden) { A.onbDone(); return; }
   if (!$('#big').hidden) { $('#big').hidden = true; return; }
   if (!$('#lb').hidden) { $('#lb').hidden = true; return; }
   if (!$('#dlg').hidden) return;
   if (S) closeSheet(); closeMenu();
 });
 const setOnline = () => { $('#offline').hidden = navigator.onLine; };
-window.addEventListener('online', () => { setOnline(); if (!ratesFresh()) fetchRates(); });
+window.addEventListener('online', () => { setOnline(); if (!ratesFresh()) fetchRates(); flushOutbox(); sendUsage(); });
 window.addEventListener('offline', setOnline);
 window.addEventListener('beforeinstallprompt', e => { e.preventDefault(); deferredPrompt = e; $('#installBtn').hidden = false; });
 window.addEventListener('appinstalled', () => { $('#installBtn').hidden = true; toast('ติดตั้งแล้ว'); });
@@ -1610,6 +1869,8 @@ document.addEventListener('visibilitychange', () => { if (document.visibilitySta
   try { const d = JSON.parse(localStorage.getItem(KEY)); if (d && Array.isArray(d.trips)) db = d; } catch {}
   try { const r = JSON.parse(localStorage.getItem(RKEY)); if (r && r.rates) rates = {rates:r.rates, at:r.at || r.updated || null}; } catch {}
   if (!db.templates) db.templates = tplWithIds(DEFAULT_TPL());
+  db.quick = Array.isArray(db.quick) && db.quick.length ? db.quick : DEFAULT_QUICK();
+  db.settings = Object.assign({usage:true}, db.settings || {});
   db.profile = Object.assign({job:'', workplace:'', name:'', blood:'', allergies:'', meds:'', contacts:[{name:'', phone:''}, {name:'', phone:''}]}, db.profile || {});
   if (!Array.isArray(db.profile.contacts) || !db.profile.contacts.length) db.profile.contacts = [{name:'', phone:''}, {name:'', phone:''}];
   let migrated = 0;
@@ -1620,17 +1881,13 @@ document.addEventListener('visibilitychange', () => { if (document.visibilitySta
   db.trips = db.trips.map(normalizeTrip);
   if (db.currentId && !cur()) db.currentId = null;
   save();
-  ui.view = db.currentId ? 'packing' : 'trips';
+  ui.view = !db.currentId ? 'trips' : currentDay(cur()) ? 'budget' : 'packing';
   render(); setOnline(); setTimeout(notifyDue, 1500);
   if (migrated) setTimeout(() => dialog({title:`ย้ายข้อมูลเดิม ${migrated} ทริปแล้ว`, text:'รายจ่าย ตั๋ว และที่พักเดิมอยู่ในหน้างบประมาณ งบรวมเดิมใส่ไว้ในหมวด "อื่นๆ" ปรับแยกหมวดได้ที่ปุ่ม "ตั้งงบ"\nแนะนำกดสำรองข้อมูลเก็บไว้หนึ่งครั้ง', ok:'เข้าใจแล้ว', cancel:''}), 300);
   if (!ratesFresh()) fetchRates();
   if (navigator.storage && navigator.storage.persist) navigator.storage.persist().catch(() => {});
-  if ('serviceWorker' in navigator && /^https?:$/.test(location.protocol)) {
-    const hadSW = !!navigator.serviceWorker.controller; let reloaded = false;
-    navigator.serviceWorker.addEventListener('controllerchange', () => { if (hadSW && !reloaded) { reloaded = true; save(); location.reload(); } });
-    navigator.serviceWorker.register('sw.js', {updateViaCache:'none'}).then(r => { r.update().catch(() => {});
-      document.addEventListener('visibilitychange', () => { if (document.visibilityState === 'visible') r.update().catch(() => {}); }); }).catch(() => {});
-  }
+  setupSW(); pruneUsage(); setTimeout(() => { flushOutbox(); sendUsage(); }, 4000);
+  if (!db.onboarded && !migrated) setTimeout(openOnb, 200);
 })();
 </script>
 </body>
