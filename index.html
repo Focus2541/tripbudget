@@ -190,6 +190,7 @@ table.t td{padding:9px 6px;border-bottom:1px solid var(--line)}table.t td.num{wh
 details summary{cursor:pointer;list-style-position:inside}
 .flag-tf{font-size:11.5px;font-weight:600;padding:1px 7px;border-radius:99px;background:var(--warn-soft);color:var(--warn);margin-left:4px;white-space:nowrap}
 #onb{position:fixed;inset:0;z-index:350;background:#fff;overflow-y:auto}
+#gate{position:fixed;inset:0;z-index:380;background:#fff;overflow-y:auto}
 .onbin{max-width:520px;margin:0 auto;min-height:100%;display:flex;flex-direction:column;padding:calc(16px + env(safe-area-inset-top,0px)) 20px calc(20px + env(safe-area-inset-bottom,0px))}
 .onbbody{flex:1;display:flex;flex-direction:column;justify-content:center;padding:20px 0}
 .onbicon{width:96px;height:96px;border-radius:28px;background:var(--acc-soft);display:grid;place-items:center;font-size:50px;margin-bottom:18px}
@@ -269,6 +270,7 @@ details summary{cursor:pointer;list-style-position:inside}
 <div id="big" data-act="closeBig" hidden></div>
 <div id="updBar" data-act="applyUpdate" role="button" hidden></div>
 <div id="onb" role="dialog" aria-modal="true" aria-label="หน้าแนะนำ" hidden></div>
+<div id="gate" role="dialog" aria-modal="true" aria-label="ขอใช้งาน" hidden></div>
 <div id="toast" role="status" aria-live="polite"></div>
 
 <script src="version.js"></script>
@@ -1551,6 +1553,7 @@ function vSettings(){
     <div class="g2 mt" style="gap:8px"><div class="alert good small"><b>✓ ส่ง</b><br>• ชื่อหน้าและปุ่มที่กด กับจำนวนครั้งต่อวัน<br>• ข้อความ error ของแอป<br>• วันที่ และเลขเวอร์ชันแอป</div>
     <div class="alert bad small"><b>✗ ไม่ส่ง</b><br>• ยอดเงิน ชื่อรายการ ชื่อทริป<br>• ประเทศ วันเดินทาง ชื่อคน<br>• รูป ข้อมูลการ์ดฉุกเฉิน<br>• รหัสเครื่องหรือตัวตนของคุณ</div></div>
     <div class="row mt-s"><span class="muted small grow">วันนี้นับไว้ ${Object.values(todayU).reduce((a, b) => a + b, 0)} ครั้ง · รอส่ง ${pend.length} วัน</span><button class="btn ghost sm" data-act="previewUsage">ดูข้อมูลที่รอส่ง</button></div></div>
+  ${gateSettingsHtml()}
   <div class="card"><div class="ch"><h2>💱 เรตเงินสด</h2><label class="tog"><input type="checkbox" id="avgTog" ${avgOn() ? 'checked' : ''}>${avgOn() ? 'เปิดอยู่' : 'ปิดอยู่'}</label></div>
     <div class="small" style="color:var(--ink2)">ใช้เรตเฉลี่ยจากการแลกเงินจริงที่บันทึกไว้ คิดรายจ่ายที่จ่ายเป็นเงินสด (รายจ่ายบัตรใช้เรตในแอป) รายการที่แก้เรตเองจะไม่ถูกเปลี่ยน</div></div>
   <div class="card"><div class="ch"><h2>🔗 เชื่อมกับแอปอื่น</h2><label class="tog"><input type="checkbox" id="inboxTog" ${inboxOn() ? 'checked' : ''}>${inboxOn() ? 'เปิดอยู่' : 'ปิดอยู่'}</label></div>
@@ -1906,6 +1909,80 @@ const R2 = {
     await dialog({title:'📷 แปลเมนู', text:'แอปแปลเมนูกำลังทำอยู่ เปิดใช้เมื่อไหร่ ปุ่มนี้จะพาไปที่แอปเลย และเพิ่มรายจ่ายเข้าทริปนี้ได้\n\nระหว่างนี้ใช้ Google Translate โหมดกล้อง หรือ Google Lens ส่องเมนูได้', ok:'เข้าใจแล้ว', cancel:''}); }
 };
 
+/* ============ ACCESS GATE (ต้องให้เจ้าของอนุมัติก่อนใช้) ============
+   ใช้รายชื่อเครื่องเดียวกับแอปแปลเมนู (Apps Script ตัวเดียวกัน) อนุมัติครั้งเดียวใช้ได้ทั้งสองแอป
+   ล็อกเฉพาะเมื่อเซิร์ฟเวอร์ตอบชัดว่ายังไม่อนุมัติ ถ้าไม่มีเน็ตหรือเซิร์ฟเวอร์ล่ม จะไม่ล็อก (กันคนติดอยู่ต่างประเทศ) */
+const GATE_KEY = 'tb_gate', SHARED_DEV = 'f2541_device', SHARED_ADMIN = 'f2541_admin';
+const gateOn = () => !!self.GATE_URL;
+let gate = (() => { try { return JSON.parse(localStorage.getItem(GATE_KEY)) || {}; } catch { return {}; } })();
+const saveGate = () => { try { localStorage.setItem(GATE_KEY, JSON.stringify(gate)); } catch {} };
+const LOCKED = ['new', 'pending', 'denied', 'off'];
+const gateLocked = () => gateOn() && LOCKED.includes(gate.access);
+const GATE_TH = {new:'ยังไม่ได้ขอใช้งาน', pending:'⏳ รอเจ้าของอนุมัติ', approved:'✅ อนุมัติแล้ว', owner:'👑 เจ้าของแอป', denied:'⛔ ไม่อนุมัติ', off:'⛔ ถูกปิดสิทธิ์', legacy:'✅ ใช้ได้'};
+function devId(){
+  let d = ''; try { d = localStorage.getItem(SHARED_DEV) || ''; } catch {}
+  if (!d) { const a = new Uint8Array(16); crypto.getRandomValues(a); d = 'd' + [...a].map(b => b.toString(36).padStart(2, '0')).join('').slice(0, 23); try { localStorage.setItem(SHARED_DEV, d); } catch {} }
+  return d;
+}
+const adminCode = () => { try { return localStorage.getItem(SHARED_ADMIN) || ''; } catch { return ''; } };
+async function gateCall(action, extra={}){
+  const ac = new AbortController(), tm = setTimeout(() => ac.abort(), 20000);
+  try {
+    const r = await fetch(self.GATE_URL, {method:'POST', headers:{'Content-Type':'text/plain;charset=utf-8'}, signal:ac.signal,
+      body:JSON.stringify({action, app:'tripbudget', device:devId(), admin:adminCode(), ...extra})});
+    const d = await r.json(); if (!d.ok) { const e = new Error(d.error || 'เกิดข้อผิดพลาด'); e.server = true; throw e; } return d;
+  } finally { clearTimeout(tm); }
+}
+async function gateCheck(manual){
+  if (!gateOn() || !navigator.onLine) { if (manual) toast('ต้องต่ออินเทอร์เน็ตก่อน', 'warn'); return; }
+  const was = gate.access, st = $('#gStatus'); if (manual && st) st.textContent = '⏳ กำลังเช็ก...';
+  try { const d = await gateCall('ping'); gate.access = d.access || 'legacy'; if (d.name) gate.name = d.name; }
+  catch (e) {
+    if (e.server && /รหัสลับ/.test(e.message)) gate.access = 'legacy'; // สคริปต์เวอร์ชันเก่ายังไม่มีระบบอนุมัติ: ไม่ล็อก
+    else { if (manual && $('#gStatus')) $('#gStatus').textContent = '❌ ' + (e.name === 'AbortError' ? 'เชื่อมต่อนานเกินไป' : e.message); return; }
+  }
+  gate.at = Date.now(); saveGate(); renderGate();
+  if (was && LOCKED.includes(was) && !gateLocked()) toast('✅ ได้รับอนุมัติแล้ว ใช้ได้เลย');
+  else if (manual) toast(GATE_TH[gate.access] || gate.access);
+  if (ui.view === 'settings') render();
+}
+function renderGate(){
+  const el = $('#gate'); if (!el) return;
+  if (!gateLocked()) { if (!el.hidden) { el.hidden = true; el.innerHTML = ''; document.body.classList.remove('lock'); } return; }
+  const a = gate.access, has = db.trips.length;
+  const body = a === 'pending'
+    ? `<div class="onbicon">⏳</div><h1 class="onbt">รอเจ้าของแอปอนุมัติ</h1><p class="onbd">ส่งคำขอในชื่อ <b>${esc(gate.name || '')}</b> แล้ว เจ้าของแอปจะได้อีเมลให้กดอนุมัติ พออนุมัติแล้วกดเช็กสถานะ หรือเปิดแอปใหม่</p>
+       <button class="btn pri block mt" data-act="gateCheck">🔄 เช็กสถานะ</button>`
+    : a === 'denied' || a === 'off'
+    ? `<div class="onbicon">⛔</div><h1 class="onbt">เครื่องนี้ใช้งานไม่ได้</h1><p class="onbd">เจ้าของแอป${a === 'off' ? 'ปิดสิทธิ์' : 'ไม่ได้อนุมัติ'}เครื่องนี้ ถ้าคิดว่าผิดพลาด ติดต่อเจ้าของแอปโดยตรง</p>
+       <button class="btn ghost block mt" data-act="gateCheck">🔄 เช็กอีกครั้ง</button>`
+    : `<div class="onbicon">🔒</div><h1 class="onbt">ขอใช้งาน TripBudget</h1><p class="onbd">แอปนี้ใช้ได้เฉพาะคนที่เจ้าของแอปอนุญาต ใส่ชื่อเล่นให้เจ้าของรู้ว่าเป็นใคร แล้วรออนุมัติ (ทำครั้งเดียวต่อเครื่อง ต้องต่อเน็ต)</p>
+       <div class="stack mt"><input id="gName" maxlength="40" placeholder="ชื่อเล่น เช่น มิ้นท์" value="${esc(gate.name || '')}" autocomplete="off"><button class="btn pri block" data-act="gateRegister">ขอใช้งาน</button></div>`;
+  el.innerHTML = `<div class="onbin"><div class="onbbody">${body}<div class="muted small mt" id="gStatus"></div>
+    ${has ? `<div class="alert info mt">มีทริปในเครื่องนี้ ${has} ทริป ข้อมูลยังอยู่ครบ <button class="link" data-act="exportData">💾 สำรองข้อมูลเก็บไว้</button></div>` : ''}
+    <details class="mt"><summary class="muted small">เป็นเจ้าของแอป?</summary><div class="row mt-s"><input id="gAdm" type="password" placeholder="รหัสผู้ดูแล" class="grow" autocomplete="off"><button class="btn ghost" data-act="gateAdmin">ยืนยัน</button></div></details>
+  </div></div>`;
+  el.hidden = false; document.body.classList.add('lock');
+}
+const GATE_ACTIONS = {
+  async gateRegister(){ const name = ($('#gName') || {}).value.trim(), st = $('#gStatus'); if (!name) { st.textContent = 'ใส่ชื่อก่อน'; $('#gName').focus(); return; }
+    if (!navigator.onLine) { st.textContent = 'ต้องต่ออินเทอร์เน็ตก่อน'; return; }
+    st.textContent = '⏳ กำลังส่งคำขอ...';
+    try { const d = await gateCall('register', {name}); gate.name = d.name || name; gate.access = d.access || 'pending'; gate.at = Date.now(); saveGate(); renderGate();
+      toast(gateLocked() ? 'ส่งคำขอแล้ว รอเจ้าของอนุมัติ' : 'ใช้งานได้แล้ว'); }
+    catch (e) { const s = $('#gStatus'); if (s) s.textContent = '❌ ' + e.message; } },
+  gateCheck(){ gateCheck(true); },
+  async gateAdmin(){ const v = ($('#gAdm') || $('#sAdm') || {}).value.trim(); try { if (v) localStorage.setItem(SHARED_ADMIN, v); else localStorage.removeItem(SHARED_ADMIN); } catch {}
+    await gateCheck(true); if (v && gate.access !== 'owner') toast('รหัสผู้ดูแลไม่ถูกต้อง', 'bad'); }
+};
+function gateSettingsHtml(){
+  if (!gateOn()) return '';
+  return `<div class="card"><div class="ch"><h2>🔒 สิทธิ์ใช้งาน</h2><span class="tag">${esc(GATE_TH[gate.access] || 'ยังไม่ได้เช็ก')}</span></div>
+    <div class="small" style="color:var(--ink2)">ใช้รายชื่อเดียวกับแอปแปลเมนู อนุมัติครั้งเดียวใช้ได้ทั้งสองแอป${gate.name ? ' · ชื่อ ' + esc(gate.name) : ''} · รหัสเครื่อง ${esc(devId().slice(0, 8))}…</div>
+    <div class="row mt"><input id="sAdm" type="password" placeholder="รหัสผู้ดูแล (เฉพาะเจ้าของแอป)" class="grow" value="${esc(adminCode())}" autocomplete="off"><button class="btn ghost sm" data-act="gateAdmin">บันทึก</button></div>
+    <button class="btn ghost sm mt-s" data-act="gateCheck">🔄 เช็กสถานะ</button></div>`;
+}
+
 /* ============ BACKUP ============ */
 async function exportData(){
   const receipts = await collectFiles(db.trips);
@@ -2118,6 +2195,7 @@ const A = {
   ePay(el){ S.pay = el.dataset.p; $$('#ePaySeg button').forEach(b => b.classList.toggle('on', b.dataset.p === S.pay)); const t = cur();
     if (!S.rateTouched && $('#eRate') && S.curr === t.currency) { $('#eRate').value = rateVal(payRate(t, S.pay)); expPreview(); } },
   ...R2,
+  ...GATE_ACTIONS,
   onbNext(){ onbStep++; renderOnb(); }, onbPrev(){ onbStep = Math.max(0, onbStep - 1); renderOnb(); },
   onbOS(el){ onbOS = el.dataset.os; renderOnb(); },
   onbDone(){ db.onboarded = true; save(); $('#onb').hidden = true; $('#onb').innerHTML = ''; document.body.classList.remove('lock'); },
@@ -2240,6 +2318,7 @@ document.addEventListener('change', async e => {
 document.addEventListener('keydown', e => {
   if (S && S.kind === 'quick' && e.target.id !== 'qNote') { if (/^[0-9.]$/.test(e.key)) { kpPress(e.key); e.preventDefault(); return; } if (e.key === 'Backspace') { kpPress('⌫'); e.preventDefault(); return; } if (e.key === 'Enter' && num(S.val) > 0) { A.saveQuick(); return; } }
   if (e.key !== 'Escape') return;
+  if (!$('#gate').hidden) return;
   if (!$('#onb').hidden) { A.onbDone(); return; }
   if (!$('#big').hidden) { $('#big').hidden = true; return; }
   if (!$('#lb').hidden) { $('#lb').hidden = true; return; }
@@ -2247,11 +2326,11 @@ document.addEventListener('keydown', e => {
   if (S) closeSheet(); closeMenu();
 });
 const setOnline = () => { $('#offline').hidden = navigator.onLine; };
-window.addEventListener('online', () => { setOnline(); if (!ratesFresh()) fetchRates(); flushOutbox(); sendUsage(); });
+window.addEventListener('online', () => { setOnline(); if (gateOn() && (!gate.access || gateLocked())) gateCheck(false); if (!ratesFresh()) fetchRates(); flushOutbox(); sendUsage(); });
 window.addEventListener('offline', setOnline);
 window.addEventListener('beforeinstallprompt', e => { e.preventDefault(); deferredPrompt = e; $('#installBtn').hidden = false; });
 window.addEventListener('appinstalled', () => { $('#installBtn').hidden = true; toast('ติดตั้งแล้ว'); });
-document.addEventListener('visibilitychange', () => { if (document.visibilityState === 'hidden') save(); else importInbox(); });
+document.addEventListener('visibilitychange', () => { if (document.visibilityState === 'hidden') save(); else { importInbox(); if (gateOn() && (gateLocked() || Date.now() - (gate.at || 0) > 12 * 3600e3)) gateCheck(false); } });
 window.addEventListener('storage', e => { if (e.key === INBOX_KEY && e.newValue) importInbox(); });
 window.addEventListener('focus', () => importInbox());
 
@@ -2287,6 +2366,7 @@ window.addEventListener('focus', () => importInbox());
     else if (sc === 'menu') A.openMenuApp(null, null, true);
     else if (sc === 'sos') go('sos'); }
   if (!db.onboarded && !migrated) setTimeout(openOnb, 200);
+  renderGate(); if (gateOn() && (!gate.access || gateLocked() || Date.now() - (gate.at || 0) > 12 * 3600e3)) setTimeout(() => gateCheck(false), 800);
 })();
 </script>
 </body>
