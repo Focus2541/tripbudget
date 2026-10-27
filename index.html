@@ -96,7 +96,7 @@ main{max-width:720px;margin:0 auto;padding:16px}
 .facts{display:flex;flex-wrap:wrap;gap:6px;margin-top:8px}
 
 /* trip list */
-.trip{cursor:pointer}.trip.cur{border-color:var(--acc);box-shadow:0 0 0 3px var(--acc-soft)}
+.trip{cursor:pointer;-webkit-user-select:none;user-select:none;-webkit-touch-callout:none}.trip.press{transform:scale(.98);transition:transform .15s}.trip.cur{border-color:var(--acc);box-shadow:0 0 0 3px var(--acc-soft)}
 .trip .flag{font-size:30px;line-height:1}
 .mini{display:grid;grid-template-columns:repeat(3,1fr);gap:10px;margin-top:12px}
 .mini div{font-size:12px;color:var(--ink3)}.mini b{display:block;font-size:13.5px;color:var(--ink);font-weight:600}.mini .bar{margin-top:4px;height:5px}
@@ -580,6 +580,7 @@ function vTrips(){
   if (!db.trips.length) return h + `<div class="empty"><div class="e">✈️</div><b>วางแผนทริปในที่เดียว</b>
     <p>สร้างทริปแล้วได้ลิสต์เตรียมของตามประเภททริป ตั้งงบและบันทึกรายจ่าย ถ้าไปต่างประเทศมีเคล็ดลับให้ด้วย</p>
     <button class="btn pri" data-act="newTrip">+ สร้างทริป</button></div>`;
+  if (db.trips.length) h += `<div class="muted small" style="margin:-4px 2px 8px">💡 กดค้างที่การ์ดทริปเพื่อแก้ไข สำรอง หรือลบ</div>`;
   const sorted = [...db.trips].sort((a, b) => (a.startDate || '9999') < (b.startDate || '9999') ? -1 : 1);
   for (const t of sorted) {
     const c = country(t), cd = countdown(t), done = t.packing.filter(p => p.checked).length, bt = budgetTotal(t), u = usedTotal(t);
@@ -1989,6 +1990,31 @@ function gateSettingsHtml(){
     <button class="btn ghost sm mt-s" data-act="gateCheck">🔄 เช็กสถานะ</button></div>`;
 }
 
+/* ============ TRIP LONG-PRESS MENU ============ */
+function tripMenu(t){
+  const c = country(t); S = {kind:'tripMenu'};
+  if (navigator.vibrate) try { navigator.vibrate(15); } catch {}
+  openSheet(`<div class="sh"><b>${c ? c.f : '🌍'} ${esc(t.name || 'ทริปไม่มีชื่อ')}</b><button class="x" data-act="closeSheet" aria-label="ปิด">✕</button></div>
+    <div class="muted small" style="margin:-6px 0 12px">${t.startDate ? thDateY(t.startDate) + ' · ' : ''}${days(t)} วัน · รายจ่าย ${t.expenses.length} รายการ</div>
+    <div class="stack"><button class="btn ghost block" data-act="openTrip" data-id="${t.id}" style="justify-content:flex-start">📂 เปิดทริปนี้</button>
+    <button class="btn ghost block" data-act="editTripId" data-id="${t.id}" style="justify-content:flex-start">✏️ แก้ไขทริป</button>
+    <button class="btn ghost block" data-act="shareTripId" data-id="${t.id}" style="justify-content:flex-start">📤 แชร์ / สำรองทริปนี้</button>
+    <button class="btn danger block" data-act="delTrip" data-id="${t.id}" style="justify-content:flex-start">🗑️ ลบทริปนี้</button></div><div style="height:16px"></div>`);
+}
+(() => { // กดค้าง 0.5 วินาทีที่การ์ดทริป
+  let tm = null, card = null, sx = 0, sy = 0, fired = 0;
+  const clear = () => { clearTimeout(tm); tm = null; if (card) card.classList.remove('press'); card = null; };
+  document.addEventListener('pointerdown', e => { const c = e.target.closest('.card.trip'); if (!c || e.button > 0) return;
+    card = c; sx = e.clientX; sy = e.clientY; c.classList.add('press');
+    tm = setTimeout(() => { const id = c.dataset.id; clear(); fired = Date.now(); const t = db.trips.find(x => x.id === id); if (t) tripMenu(t); }, 500); });
+  document.addEventListener('pointermove', e => { if (tm && (Math.abs(e.clientX - sx) > 10 || Math.abs(e.clientY - sy) > 10)) clear(); });
+  ['pointerup', 'pointercancel', 'scroll'].forEach(ev => document.addEventListener(ev, clear, true));
+  document.addEventListener('contextmenu', e => { const c = e.target.closest('.card.trip'); if (!c) return; e.preventDefault();
+    if (Date.now() - fired > 800) { clear(); fired = Date.now(); const t = db.trips.find(x => x.id === c.dataset.id); if (t) tripMenu(t); } });
+  // กันการคลิกที่ตามมาหลังกดค้าง ไม่ให้เปิดทริปทับเมนู
+  document.addEventListener('click', e => { if (Date.now() - fired < 700 && e.target.closest('.card.trip')) { e.stopPropagation(); e.preventDefault(); } }, true);
+})();
+
 /* ============ BACKUP ============ */
 async function exportData(){
   const receipts = await collectFiles(db.trips);
@@ -2077,13 +2103,17 @@ const A = {
         t.packing.push(...miss); save(); render(); toast(`เพิ่ม ${miss.length} รายการแล้ว`); }
     }
   },
-  async delTrip(){
-    const f = ui.form, t = f && db.trips.find(x => x.id === f.id); if (!t) return;
+  async delTrip(el){
+    const id = (el && el.dataset && el.dataset.id) || (ui.form && ui.form.id), t = db.trips.find(x => x.id === id); if (!t) return;
+    if (S && S.kind === 'tripMenu') closeSheet();
     if (!await dialog({title:`ลบทริป "${t.name || 'ทริปไม่มีชื่อ'}"?`, text:'ลบแล้วกู้คืนไม่ได้ ถ้าไม่มีไฟล์สำรอง', ok:'ลบทริป', danger:true})) return;
     t.expenses.forEach(e => e.receipts.forEach(r => IDB.del(r))); t.docs.forEach(d => d.files.forEach(f => IDB.del(f.id)));
     db.trips = db.trips.filter(x => x !== t); if (db.currentId === t.id) db.currentId = null; ui.form = null; save(); go('trips'); toast('ลบทริปแล้ว', 'warn');
   },
-  openTrip(el){ if (db.currentId !== el.dataset.id) { ui.calDay = null; ui.expCat = ''; } db.currentId = el.dataset.id; save(); go('packing'); },
+  tripMenu(el){ const t = db.trips.find(x => x.id === el.dataset.id); if (t) tripMenu(t); },
+  editTripId(el){ closeSheet(); const t = db.trips.find(x => x.id === el.dataset.id); if (!t) return; db.currentId = t.id; save(); ui.form = tripFormState(t); go('form'); },
+  shareTripId(el){ closeSheet(); db.currentId = el.dataset.id; save(); render(); shareTrip(); },
+  openTrip(el){ if (S && S.kind === 'tripMenu') closeSheet(); if (db.currentId !== el.dataset.id) { ui.calDay = null; ui.expCat = ''; } db.currentId = el.dataset.id; save(); go('packing'); },
   packFilter(el){ ui.packFilter = el.dataset.k; render(); },
   toggleItem(el){ const t = cur(), p = t && t.packing.find(x => x.id === el.dataset.id); if (p) toggleItem(t, p); },
   editItem(el){ const t = cur(), p = t.packing.find(x => x.id === el.dataset.id); if (p) itemSheet(t, p); },
