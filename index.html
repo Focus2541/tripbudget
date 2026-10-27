@@ -467,7 +467,7 @@ function normalizeTrip(t){
   t.exchanges = (Array.isArray(t.exchanges) ? t.exchanges : []).map(x => ({id:x.id || uid(), date:x.date || '', place:String(x.place || ''), thb:num(x.thb), local:num(x.local), note:String(x.note || '')})).filter(x => x.thb > 0 && x.local > 0);
   t.cashAdj = num(t.cashAdj); t.dailyBudget = Math.max(0, num(t.dailyBudget));
   const ic = t.ic || {};
-  t.ic = {name:ic.name || 'Suica', adj:num(ic.adj), topups:(Array.isArray(ic.topups) ? ic.topups : []).map(x => ({id:x.id || uid(), date:x.date || '', day:Math.max(0, parseInt(x.day) || 0), amount:num(x.amount), pay:x.pay === 'cash' ? 'cash' : 'card'})).filter(x => x.amount > 0)};
+  t.ic = {name:ic.name && !(ic.name === 'Suica' && t.country !== 'JP') ? String(ic.name) : '', adj:num(ic.adj), topups:(Array.isArray(ic.topups) ? ic.topups : []).map(x => ({id:x.id || uid(), date:x.date || '', day:Math.max(0, parseInt(x.day) || 0), amount:num(x.amount), pay:x.pay === 'cash' ? 'cash' : 'card'})).filter(x => x.amount > 0)};
   t.tipsDone = t.tipsDone || {}; t.remDone = t.remDone || {};
   t.sos = Object.assign({hotel:'', hotelAddr:'', hotelLocal:'', hotelPhone:'', insurer:'', policy:'', insPhone:'', embassy:'', note:''}, t.sos || {});
   t.plan = (Array.isArray(t.plan) ? t.plan : []).map(x => ({id:x.id || uid(), day:Math.max(1, parseInt(x.day) || 1), time:x.time || '', title:x.title || '', place:x.place || '', note:x.note || ''}));
@@ -855,7 +855,7 @@ function expSheet(t, e){
     ${ab ? `<label class="f" id="eRateBox" ${x.curr === 'THB' ? 'hidden' : ''}>เรท 1 ${t.currency} = ? บาท<input id="eRate" type="number" inputmode="decimal" step="any" value="${rateVal(x.curr === 'THB' ? t.rate : x.rate)}" class="num"></label>` : ''}
     <div class="preview" id="ePrev"></div>
     ${ab ? `<div><div class="muted small" style="margin-bottom:6px">จ่ายด้วย</div><div class="seg" id="ePaySeg">${payOpts(t).map(p => `<button class="${p === S.pay ? 'on' : ''}" data-act="ePay" data-p="${p}">${PAYS[p].i} ${PAYS[p].n}</button>`).join('')}</div></div>` : ''}
-    ${isJP(t) ? `<label class="tog" style="border-radius:12px;align-items:flex-start;padding:10px 12px"><input type="checkbox" id="eTf" ${x.taxFree ? 'checked' : ''} style="margin-top:3px"><span>🏷️ ซื้อแบบ Tax-free<br><span class="muted small">ยื่นพาสปอร์ตตัวจริงตอนจ่าย เก็บใบเสร็จกับของไว้ด้วยกัน ห้ามแกะใช้ · ถ่ายรูปใบเสร็จแนบไว้ด้านล่าง</span></span></label>` : ''}
+    ${hasTaxRefund(t) ? `<label class="tog" style="border-radius:12px;align-items:flex-start;padding:10px 12px"><input type="checkbox" id="eTf" ${x.taxFree ? 'checked' : ''} style="margin-top:3px"><span>🏷️ ซื้อแบบ Tax-free / ขอคืนภาษี<br><span class="muted small">${esc(isJP(t) ? 'ยื่นพาสปอร์ตตัวจริงตอนจ่าย เก็บใบเสร็จกับของไว้ด้วยกัน ห้ามแกะใช้' : TAX_REFUND[t.country].hint)} · ถ่ายรูปใบเสร็จแนบไว้ด้านล่าง</span></span></label>` : ''}
     <div><div class="muted small" style="margin-bottom:6px">หมวด</div><div class="chips" id="eCats">${Object.entries(BCATS).map(([k, c]) => `<button class="chip ${k === x.cat ? 'on' : ''}" data-act="eCat" data-k="${k}">${c.i} ${c.n.split(' ')[0]}</button>`).join('')}</div></div>
     <label class="f">รายการ<input id="eName" value="${esc(e ? x.name : '')}" placeholder="เว้นว่าง = ใช้ชื่อหมวด" maxlength="80"></label>
     <label class="f">วัน<select id="eDay">${dayOpts}</select></label>
@@ -1565,11 +1565,14 @@ function tripForFeedback(t){
 }
 
 /* ============ ROUND 2: กระเป๋าเงิน / แลกเงิน / งบรายวัน / ญี่ปุ่น / สรุปเป็นภาพ / เชื่อมแอปอื่น ============ */
-const PAYS = {cash:{n:'เงินสด', i:'💵'}, card:{n:'บัตร', i:'💳'}, ic:{n:'IC card', i:'🚃'}};
-const IC_NAMES = ['Suica', 'PASMO', 'ICOCA', 'Welcome Suica', 'อื่นๆ'];
+const PAYS = {cash:{n:'เงินสด', i:'💵'}, card:{n:'บัตร', i:'💳'}, ic:{n:'บัตรเดินทาง', i:'🚃'}};
 const isJP = t => !!t && t.country === 'JP';
+const hasTransit = t => !!t && !!TRANSIT[t.country];
+const hasTaxRefund = t => isJP(t) || (!!t && !!TAX_REFUND[t.country]);
+const icNames = t => [...(TRANSIT[t.country] || []), 'อื่นๆ'];
+const icName = t => t.ic.name || (TRANSIT[t.country] || ['บัตรเดินทาง'])[0];
 const hasLocal = t => !!t && isAbroad(t) && !!t.currency && t.currency !== 'THB';
-const payOpts = t => isJP(t) ? ['cash', 'card', 'ic'] : ['cash', 'card'];
+const payOpts = t => hasTransit(t) ? ['cash', 'card', 'ic'] : ['cash', 'card'];
 const avgOn = () => db.settings.avgRate !== false;
 const sumOf = (arr, f) => arr.reduce((s, x) => s + f(x), 0);
 function avgRate(t){ const l = sumOf(t.exchanges, x => x.local); return l > 0 ? sumOf(t.exchanges, x => x.thb) / l : 0; }
@@ -1579,7 +1582,7 @@ const payRate = (t, pay) => pay === 'cash' ? cashRate(t) : pay === 'ic' ? icRate
 const isLocalCash = (t, e) => e.pay === 'cash' && e.curr === t.currency;
 function defaultPay(t, cat){
   if (!hasLocal(t)) return '';
-  if (cat === 'transport' && isJP(t) && t.ic.topups.length) return 'ic';
+  if (cat === 'transport' && hasTransit(t) && t.ic.topups.length) return 'ic';
   return payOpts(t).includes(db.settings.lastPay) ? db.settings.lastPay : 'cash';
 }
 function applyAvgRate(t){
@@ -1671,21 +1674,23 @@ function embassyHtml(t){
     <div class="muted small mt-s">ใช้เมื่อพาสปอร์ตหาย ถูกจับ เจ็บหนัก หรือเกิดภัยพิบัติ · ${esc(EMB_AS_OF)} เบอร์อาจเปลี่ยน เช็กเว็บสถานทูตอีกครั้งก่อนเดินทาง</div></div>`;
 }
 
-/* ---- 10. ญี่ปุ่น: IC card + Tax-free ---- */
+/* ---- 10. บัตรเดินทาง + Tax-free / คืนภาษี (ญี่ปุ่น + ประเทศใน TRANSIT / TAX_REFUND) ---- */
 function icInfo(t){ const top = sumOf(t.ic.topups, x => x.amount), used = sumOf(t.expenses.filter(e => e.pay === 'ic'), e => toLocal(t, e)); return {top, used, bal:top + t.ic.adj - used}; }
 function icHtml(t){
-  if (!isJP(t)) return '';
-  const c = t.currency, i = icInfo(t);
-  return `<div class="card"><div class="ch"><h2>🚃 IC card</h2><select id="icName" aria-label="ชื่อบัตร" style="width:auto;min-height:36px;padding:4px 8px;font-size:14px">${IC_NAMES.map(n => `<option ${n === t.ic.name ? 'selected' : ''}>${esc(n)}</option>`).join('')}</select></div>
-    ${i.top || i.used ? `<div class="wal"><span class="muted small">ยอดคงเหลือ ${esc(t.ic.name)} (ตามที่จด)</span><b class="num ${i.bal < 0 ? 'tbad' : ''}">${money(i.bal, c)}</b></div>
+  if (!hasTransit(t)) return '';
+  const c = t.currency, i = icInfo(t), nm = icName(t);
+  return `<div class="card"><div class="ch"><h2>🚃 บัตรเดินทาง</h2><select id="icName" aria-label="ชื่อบัตร" style="width:auto;max-width:170px;min-height:36px;padding:4px 8px;font-size:14px">${icNames(t).map(n => `<option ${n === nm ? 'selected' : ''}>${esc(n)}</option>`).join('')}</select></div>
+    ${i.top || i.used ? `<div class="wal"><span class="muted small">ยอดคงเหลือ ${esc(nm)} (ตามที่จด)</span><b class="num ${i.bal < 0 ? 'tbad' : ''}">${money(i.bal, c)}</b></div>
     <div class="muted small mt-s">เติม ${money(i.top, c)}${t.ic.adj ? ' · ปรับ ' + (t.ic.adj > 0 ? '+' : '') + money(t.ic.adj, c) : ''} − ใช้ ${money(i.used, c)}</div>`
-      : `<div class="muted small">บันทึกตอนเติมเงิน แล้วเวลาจ่ายค่ารถไฟหรือร้านสะดวกซื้อด้วยบัตร ให้เลือกจ่ายด้วย "🚃 IC card" แอปจะบอกยอดที่เหลือ</div>`}
+      : `<div class="muted small">บันทึกตอนเติมเงิน แล้วเวลาจ่ายค่ารถไฟหรือร้านสะดวกซื้อด้วยบัตร ให้เลือกจ่ายด้วย "🚃 บัตรเดินทาง" แอปจะบอกยอดที่เหลือ</div>`}
     ${t.ic.topups.length ? `<div class="muted small" style="font-weight:700;margin:10px 0 2px">ประวัติการเติม</div>` + t.ic.topups.slice(-5).reverse().map(x => `<div class="row small" style="padding:5px 0;border-bottom:1px solid var(--line)"><span class="grow">${x.date ? thDate(x.date) : 'วันที่ ' + x.day} · ${x.pay === 'cash' ? '💵 เงินสด' : '💳 บัตร'}</span><b class="num">${money(x.amount, c)}</b><button class="link" data-act="icDel" data-id="${x.id}" aria-label="ลบ">ลบ</button></div>`).join('') : ''}
     <div class="row wrap mt"><button class="btn ghost sm" data-act="icTop">+ เติมเงิน</button>${i.top ? '<button class="btn ghost sm" data-act="icAdj">ปรับยอดตามจริง</button>' : ''}</div>
     <div class="muted small mt-s">ดูยอดจริงได้ที่จอประตูตรวจตั๋วตอนแตะออก หรือเครื่องเติมเงินในสถานี ไม่ต้องจดทุกเที่ยว กด "ปรับยอดตามจริง" แอปจะบันทึกส่วนต่างเป็นค่าเดินทางให้</div></div>`;
 }
 const TF_NEW = '2026-11-01';
 function taxFreeHtml(t){
+  if (t && NO_TAX_REFUND[t.country]) return `<div class="card flat small" style="color:var(--ink2)">🏷️ ${esc(NO_TAX_REFUND[t.country])}</div>`;
+  if (t && !isJP(t) && TAX_REFUND[t.country]) return taxRefundHtml(t, TAX_REFUND[t.country]);
   if (!isJP(t)) return '';
   const list = t.expenses.filter(e => e.taxFree), newRule = !t.startDate || endDate(t) >= TF_NEW;
   let h = `<div class="card"><div class="ch"><h2>🏷️ Tax-free ญี่ปุ่น</h2>${list.length ? `<span class="tag">${list.length} ใบเสร็จ</span>` : ''}</div>`;
@@ -1707,6 +1712,22 @@ function taxFreeHtml(t){
       <li>เงินคืนผ่านบริษัทคืนภาษีของร้าน (บัตร แอป บัญชี หรือเงินสด) หักค่าธรรมเนียม และต้องผ่านศุลกากรภายใน 90 วันหลังซื้อ</li></ol></details>`
     : `<div class="muted small mt-s">ทริปนี้จบก่อน 1 พ.ย. 2569: ร้านหักภาษีให้ตอนจ่าย (ยื่นพาสปอร์ต ยอด ¥5,000 ขึ้นไป) ของกินของใช้ห้ามแกะก่อนออกจากญี่ปุ่น</div>`;
   return h + '</div>';
+}
+
+function taxRefundHtml(t, R){
+  const list = t.expenses.filter(e => e.taxFree), c = t.currency;
+  let h = `<div class="card"><div class="ch"><h2>🏷️ ${esc(R.name)}</h2>${list.length ? `<span class="tag">${list.length} ใบเสร็จ</span>` : ''}</div>`;
+  if (!list.length) h += `<div class="muted small">ซื้อของที่ขอคืนภาษีได้ ให้ติ๊ก "Tax-free / ขอคืนภาษี" ตอนบันทึกรายจ่าย แอปจะรวมใบเสร็จไว้ให้เช็กก่อนไปสนามบิน${R.min ? ` · ขั้นต่ำ ${money(R.min, c)} ${esc(R.scope)}` : ''}</div>`;
+  else {
+    const tot = sumOf(list, e => toLocal(t, e));
+    h += list.map(e => { const y = toLocal(t, e), flags = [];
+      if (R.min && y < R.min) flags.push(`ต่ำกว่าขั้นต่ำ ${money(R.min, c)} ${R.scope}`);
+      if (!e.receipts.length) flags.push('📷 ยังไม่มีรูปใบเสร็จ');
+      return `<button class="ex" data-act="editExp" data-id="${e.id}"><span class="ic">🧾</span><span class="grow"><span class="nm">${esc(e.name)}</span><span class="muted small" style="display:block">${e.day ? 'วันที่ ' + e.day : 'ก่อนเดินทาง'}${flags.length ? ` · <span style="color:var(--warn)">${esc(flags.join(' · '))}</span>` : ''}</span></span><b class="num">${money(y, c)}</b></button>`; }).join('');
+    h += `<div class="alert good mt-s">รวม ${money(tot, c)}${R.est ? ` · อาจได้คืนราว ${money(tot * R.est, c)} (≈ ${money(tot * R.est * t.rate)}) ตัวเลขประมาณ` : ''}</div>`;
+  }
+  return h + `<details class="mt"><summary class="link">วิธีขอคืนภาษี</summary><ol class="steps small mt-s" style="color:var(--ink2)">${R.steps.map(x => `<li>${esc(x)}</li>`).join('')}</ol>
+    <div class="muted small">ข้อมูล ณ ${esc(TAX_REFUND_AS_OF)} กติกาเปลี่ยนได้ ถามร้านหรือดูป้าย Tax free ก่อนซื้อ</div></details></div>`;
 }
 
 /* ---- 11. สรุปทริปเป็นภาพ ---- */
@@ -1800,12 +1821,12 @@ function importInbox(){
     if (!t) continue; // ยังไม่มีทริป เก็บไว้ก่อน
     const amount = num(it.amount), curr = String(it.curr || t.currency || 'THB').toUpperCase();
     if (!(amount > 0) || amount > 1e9 || !CURR[curr]) { done.add(key); continue; }
-    const pay = PAYS[it.pay] && (it.pay !== 'ic' || isJP(t)) ? it.pay : '', cat = BCATS[it.cat] ? it.cat : 'food';
+    const pay = PAYS[it.pay] && (it.pay !== 'ic' || hasTransit(t)) ? it.pay : '', cat = BCATS[it.cat] ? it.cat : 'food';
     const rate = curr === 'THB' ? 1 : curr === t.currency ? payRate(t, pay) : anyRate(curr);
     if (!(rate > 0)) { done.add(key); continue; }
     const d = Number.isInteger(it.day) && it.day >= 0 && it.day <= days(t) ? it.day : quickDay(t);
     t.expenses.push({id:uid(), name:String(it.name || BCATS[cat].n.split(' (')[0]).trim().slice(0, 80) || 'รายจ่าย', cat, amount, curr, rate, pay, day:d,
-      note:String(it.note || '').slice(0, 120), receipts:[], paidBy:t.members[0].id, splitAmong:t.members.map(m => m.id), taxFree:!!it.taxFree && isJP(t), rateManual:false, src:String(it.source || 'app').slice(0, 30)});
+      note:String(it.note || '').slice(0, 120), receipts:[], paidBy:t.members[0].id, splitAmong:t.members.map(m => m.id), taxFree:!!it.taxFree && hasTaxRefund(t), rateManual:false, src:String(it.source || 'app').slice(0, 30)});
     if (id) db.inboxSeen.push(id); done.add(key); n++; per[t.id] = (per[t.id] || 0) + 1;
   }
   if (done.size) { const rest = readInbox().filter(x => !done.has(JSON.stringify(x)));
@@ -1849,7 +1870,7 @@ const R2 = {
       body:`<label class="f">งบต่อวัน<input name="v" type="number" inputmode="decimal" step="any" min="0" class="num" value="${num(t.dailyBudget) || ''}" placeholder="${Math.round(auto) || 0}"></label>`, ok:'บันทึก'});
     if (!r) return; t.dailyBudget = Math.max(0, num(r.v)); save(); render(); toast(t.dailyBudget ? `ตั้งงบวันละ ${money(t.dailyBudget)} แล้ว` : 'ใช้ค่าอัตโนมัติ'); },
   async icTop(){ const t = cur(), c = t.currency;
-    const r = await dialog({title:`เติมเงิน ${t.ic.name}`, body:`<label class="f">จำนวน (${c})<input name="v" type="number" inputmode="numeric" step="any" min="0" class="num" placeholder="เช่น 3000"></label>
+    const r = await dialog({title:`เติมเงิน ${icName(t)}`, body:`<label class="f">จำนวน (${c})<input name="v" type="number" inputmode="numeric" step="any" min="0" class="num" placeholder="เช่น 3000"></label>
       <label class="f mt-s">จ่ายด้วย<select name="pay"><option value="cash">💵 เงินสด (หักจากกระเป๋าเงิน)</option><option value="card">💳 บัตร / Apple Pay</option></select></label>`, ok:'บันทึก'});
     if (!r || !(num(r.v) > 0)) return; t.ic.topups.push({id:uid(), date:todayIso(), day:quickDay(t), amount:num(r.v), pay:r.pay === 'card' ? 'card' : 'cash'});
     save(); render(); toast(`เติม ${money(num(r.v), c)} แล้ว`); },
@@ -1857,9 +1878,9 @@ const R2 = {
     if (!await dialog({title:'ลบการเติมเงินนี้?', text:money(x.amount, t.currency), ok:'ลบ', danger:true})) return;
     t.ic.topups = t.ic.topups.filter(v => v !== x); save(); render(); },
   async icAdj(){ const t = cur(), c = t.currency, i = icInfo(t);
-    const r = await dialog({title:`ยอดจริงใน ${t.ic.name}`, text:`ตามที่จดไว้ควรเหลือ ${money(i.bal, c)}\nดูยอดได้ที่จอประตูตอนแตะออก หรือเครื่องเติมเงิน`, body:`<label class="f">ยอดคงเหลือจริง (${c})<input name="v" type="number" inputmode="numeric" step="any" min="0" class="num"></label>`, ok:'ปรับยอด'});
+    const r = await dialog({title:`ยอดจริงใน ${icName(t)}`, text:`ตามที่จดไว้ควรเหลือ ${money(i.bal, c)}\nดูยอดได้ที่จอประตูตอนแตะออก หรือเครื่องเติมเงิน`, body:`<label class="f">ยอดคงเหลือจริง (${c})<input name="v" type="number" inputmode="numeric" step="any" min="0" class="num"></label>`, ok:'ปรับยอด'});
     if (!r || r.v === '') return; const diff = i.bal - num(r.v); if (Math.abs(diff) < 1) { toast('ตรงกับที่จดไว้ 👍'); return; }
-    if (diff > 0) { t.expenses.push({id:uid(), name:`ค่าเดินทาง ${t.ic.name} (ไม่ได้จด)`, cat:'transport', amount:+diff.toFixed(0), curr:c, rate:icRate(t), pay:'ic', day:quickDay(t), note:'จากการเช็กยอดบัตร', receipts:[], paidBy:t.members[0].id, splitAmong:t.members.map(m => m.id), taxFree:false, rateManual:false, src:''});
+    if (diff > 0) { t.expenses.push({id:uid(), name:`ค่าเดินทาง ${icName(t)} (ไม่ได้จด)`, cat:'transport', amount:+diff.toFixed(0), curr:c, rate:icRate(t), pay:'ic', day:quickDay(t), note:'จากการเช็กยอดบัตร', receipts:[], paidBy:t.members[0].id, splitAmong:t.members.map(m => m.id), taxFree:false, rateManual:false, src:''});
       toast(`บันทึกค่าเดินทาง ${money(diff, c)} แล้ว`); }
     else { t.ic.adj += -diff; toast('ปรับยอดแล้ว'); }
     save(); render(); },
@@ -2006,7 +2027,7 @@ const A = {
     const rate = S.curr === 'THB' ? 1 : (!S.rateTouched && S.curr === t.currency && $('#eRate') && num($('#eRate').value) === rateVal(payRate(t, S.pay))) ? payRate(t, S.pay) : num($('#eRate') ? $('#eRate').value : t.rate); if (rate <= 0) { toast('ใส่เรทก่อน', 'bad'); return; }
     const split = $('#eSplit') ? $$('#eSplit input:checked').map(i => i.value) : t.members.map(m => m.id);
     if (!split.length) { toast('เลือกคนที่หารอย่างน้อย 1 คน', 'bad'); return; }
-    const pay = S.pay || '', taxFree = isJP(t) && !!($('#eTf') && $('#eTf').checked);
+    const pay = S.pay || '', taxFree = hasTaxRefund(t) && !!($('#eTf') && $('#eTf').checked);
     const rateManual = S.curr === t.currency && pay === 'cash' && Math.abs(rate - payRate(t, 'cash')) > 1e-9 && (S.rateTouched || S.wasManual);
     const v = {name:$('#eName').value.trim() || BCATS[S.cat].n.split(' (')[0], amount, curr:S.curr, rate, cat:S.cat, day:parseInt($('#eDay').value) || 0, note:$('#eNote').value.trim(), receipts:S.receipts,
       paidBy:$('#ePaid') ? $('#ePaid').value : t.members[0].id, splitAmong:split, pay, taxFree, rateManual};
