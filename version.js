@@ -4,6 +4,6 @@
    - FEEDBACK_URL: ลิงก์ Web app ของ Google Apps Script (ลงท้ายด้วย /exec)
      ใช้ส่งความเห็นและสถิติการใช้งาน ถ้าเว้นว่าง แอปจะเก็บไว้ในเครื่องรอส่งทีหลัง
    - MENU_APP_URL: ลิงก์แอปแปลเมนู (เช่น '../menu/') เว้นว่าง = ปุ่ม "แปลเมนู" จะบอกว่ายังไม่เปิดให้ใช้ */
-self.APP_VERSION = '5.6.1';
+self.APP_VERSION = '5.6.2';
 self.FEEDBACK_URL = '';
-self.MENU_APP_URL = '../menu/';
+self.MENU_APP_URL = '../Menu/';
