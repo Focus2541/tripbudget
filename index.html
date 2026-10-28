@@ -1931,6 +1931,10 @@ function devId(){
   if (!d) { const a = new Uint8Array(16); crypto.getRandomValues(a); d = 'd' + [...a].map(b => b.toString(36).padStart(2, '0')).join('').slice(0, 23); try { localStorage.setItem(SHARED_DEV, d); } catch {} }
   return d;
 }
+const uaShort = () => { const u = navigator.userAgent;
+  const os = /iPhone/.test(u) ? 'iPhone' : /iPad/.test(u) ? 'iPad' : /Android/.test(u) ? 'Android' + ((u.match(/Android [\d.]+; ([^;)]+)/) || [])[1] ? ' ' + u.match(/Android [\d.]+; ([^;)]+)/)[1].replace(/ Build.*/, '') : '') : /Windows/.test(u) ? 'Windows' : /Mac OS/.test(u) ? 'Mac' : 'อื่นๆ';
+  const br = /Line\//.test(u) ? 'LINE' : /SamsungBrowser/.test(u) ? 'Samsung' : /CriOS|Chrome/.test(u) ? 'Chrome' : /Safari/.test(u) ? 'Safari' : /Firefox/.test(u) ? 'Firefox' : '';
+  return (os + (br ? ' · ' + br : '')).slice(0, 60); };
 const adminCode = () => { try { return localStorage.getItem(SHARED_ADMIN) || ''; } catch { return ''; } };
 async function gateCall(action, extra={}){
   const ac = new AbortController(), tm = setTimeout(() => ac.abort(), 20000);
@@ -1943,7 +1947,7 @@ async function gateCall(action, extra={}){
 async function gateCheck(manual){
   if (!gateOn() || !navigator.onLine) { if (manual) toast('ต้องต่ออินเทอร์เน็ตก่อน', 'warn'); return; }
   const was = gate.access, st = $('#gStatus'); if (manual && st) st.textContent = '⏳ กำลังเช็ก...';
-  try { const d = await gateCall('ping'); gate.access = d.access || 'legacy'; if (d.name) gate.name = d.name; }
+  try { const d = await gateCall('ping'); gate.access = d.access || 'legacy'; if (d.name) gate.name = d.name; gate.verify = d.verify || ''; }
   catch (e) {
     if (e.server && /รหัสลับ/.test(e.message)) gate.access = 'legacy'; // สคริปต์เวอร์ชันเก่ายังไม่มีระบบอนุมัติ: ไม่ล็อก
     else { if (manual && $('#gStatus')) $('#gStatus').textContent = '❌ ' + (e.name === 'AbortError' ? 'เชื่อมต่อนานเกินไป' : e.message); return; }
@@ -1958,7 +1962,7 @@ function renderGate(){
   if (!gateLocked()) { if (!el.hidden) { el.hidden = true; el.innerHTML = ''; document.body.classList.remove('lock'); } return; }
   const a = gate.access, has = db.trips.length;
   const body = a === 'pending'
-    ? `<div class="onbicon">⏳</div><h1 class="onbt">รอเจ้าของแอปอนุมัติ</h1><p class="onbd">ส่งคำขอในชื่อ <b>${esc(gate.name || '')}</b> แล้ว เจ้าของแอปจะได้อีเมลให้กดอนุมัติ พออนุมัติแล้วกดเช็กสถานะ หรือเปิดแอปใหม่</p>
+    ? `<div class="onbicon">⏳</div><h1 class="onbt">รอเจ้าของแอปอนุมัติ</h1>${gate.verify ? `<div style="text-align:center;background:var(--acc-soft);border-radius:14px;padding:12px;margin:6px 0 12px"><div class="muted small">รหัสยืนยัน</div><b class="num" style="font-size:38px;letter-spacing:8px;color:var(--acc-ink)">${esc(gate.verify)}</b><div class="small" style="color:var(--ink2)">บอกรหัสนี้กับเจ้าของแอปทาง LINE เจ้าของจะเช็กว่าตรงกับในอีเมลก่อนอนุมัติ</div></div>` : ''}<p class="onbd">ส่งคำขอในชื่อ <b>${esc(gate.name || '')}</b> แล้ว เจ้าของแอปจะได้อีเมลให้กดอนุมัติ พออนุมัติแล้วกดเช็กสถานะ หรือเปิดแอปใหม่</p>
        <button class="btn pri block mt" data-act="gateCheck">🔄 เช็กสถานะ</button>`
     : a === 'denied' || a === 'off'
     ? `<div class="onbicon">⛔</div><h1 class="onbt">เครื่องนี้ใช้งานไม่ได้</h1><p class="onbd">เจ้าของแอป${a === 'off' ? 'ปิดสิทธิ์' : 'ไม่ได้อนุมัติ'}เครื่องนี้ ถ้าคิดว่าผิดพลาด ติดต่อเจ้าของแอปโดยตรง</p>
@@ -1975,7 +1979,7 @@ const GATE_ACTIONS = {
   async gateRegister(){ const name = ($('#gName') || {}).value.trim(), st = $('#gStatus'); if (!name) { st.textContent = 'ใส่ชื่อก่อน'; $('#gName').focus(); return; }
     if (!navigator.onLine) { st.textContent = 'ต้องต่ออินเทอร์เน็ตก่อน'; return; }
     st.textContent = '⏳ กำลังส่งคำขอ...';
-    try { const d = await gateCall('register', {name}); gate.name = d.name || name; gate.access = d.access || 'pending'; gate.at = Date.now(); saveGate(); renderGate();
+    try { const d = await gateCall('register', {name, ua:uaShort()}); gate.name = d.name || name; gate.access = d.access || 'pending'; gate.verify = d.verify || ''; gate.at = Date.now(); saveGate(); renderGate();
       toast(gateLocked() ? 'ส่งคำขอแล้ว รอเจ้าของอนุมัติ' : 'ใช้งานได้แล้ว'); }
     catch (e) { const s = $('#gStatus'); if (s) s.textContent = '❌ ' + e.message; } },
   gateCheck(){ gateCheck(true); },
